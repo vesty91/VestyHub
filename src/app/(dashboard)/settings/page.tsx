@@ -31,7 +31,9 @@ export default async function SettingsPage() {
             <p className="text-xl font-semibold">{user.name}</p>
             <p className="text-muted-foreground mt-1 text-sm">{user.email}</p>
           </div>
-          <Badge className="border-primary/20 bg-primary/10 text-primary">{user.role}</Badge>
+          <Badge className="border-primary/20 bg-primary/10 text-primary">
+            {user.role}
+          </Badge>
         </div>
       </Panel>
 
