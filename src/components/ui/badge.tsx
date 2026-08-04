@@ -6,7 +6,11 @@ type BadgeProps = React.ComponentProps<"span"> & {
   variant?: "default" | "outline";
 };
 
-export function Badge({ className, variant = "default", ...props }: BadgeProps) {
+export function Badge({
+  className,
+  variant = "default",
+  ...props
+}: BadgeProps) {
   return (
     <span
       className={cn(
