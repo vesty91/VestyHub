@@ -42,17 +42,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format
-      - uses: actions/upload-artifact@v4
-        with:
-          name: phase3b-formatted-source
-          path: |
-            src/app/(dashboard)/dashboard/page.tsx
-            src/app/(dashboard)/settings/page.tsx
-            src/app/globals.css
-            src/components/settings/theme-selector.test.tsx
-            src/components/settings/theme-selector.tsx
-            src/components/vestyhub/primitives.tsx
+      - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test:unit
