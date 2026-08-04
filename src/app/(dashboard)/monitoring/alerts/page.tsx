@@ -13,14 +13,6 @@ import { requireUser } from "@/lib/auth/dal";
 
 export const dynamic = "force-dynamic";
 
-function severityTone(severity: string) {
-  const normalized = severity.toLowerCase();
-  if (["critical", "fatal", "emergency"].includes(normalized)) return "danger" as const;
-  if (["warning", "warn"].includes(normalized)) return "warning" as const;
-  if (["info", "notice"].includes(normalized)) return "info" as const;
-  return "neutral" as const;
-}
-
 function AlertCard({ alert }: { alert: MonitoringAlert }) {
   return (
     <li>
@@ -50,9 +42,7 @@ function AlertCard({ alert }: { alert: MonitoringAlert }) {
               Depuis le {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(alert.startsAt))}
             </span>
           ) : null}
-          <span className={`capitalize text-${severityTone(alert.severity)}`}>
-            Sévérité : {alert.severity}
-          </span>
+          <span className="capitalize">Sévérité : {alert.severity}</span>
         </div>
         {Object.keys(alert.labels).length > 0 ? (
           <dl className="mt-4 flex flex-wrap gap-2">
