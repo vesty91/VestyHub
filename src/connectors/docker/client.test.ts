@@ -37,12 +37,7 @@ describe("calculateUptimeSeconds", () => {
 
   it("calculates one hour for a running container", () => {
     expect(
-      calculateUptimeSeconds(
-        "running",
-        "2026-08-04T11:00:00Z",
-        undefined,
-        nowMs,
-      ),
+      calculateUptimeSeconds("running", "2026-08-04T11:00:00Z", undefined, nowMs),
     ).toBe(3600);
   });
 
@@ -70,12 +65,7 @@ describe("calculateUptimeSeconds", () => {
 
   it("never returns a negative uptime for a future start timestamp", () => {
     expect(
-      calculateUptimeSeconds(
-        "running",
-        "2026-08-04T13:00:00Z",
-        undefined,
-        nowMs,
-      ),
+      calculateUptimeSeconds("running", "2026-08-04T13:00:00Z", undefined, nowMs),
     ).toBe(0);
   });
 });
