@@ -173,7 +173,7 @@ export async function queryPrometheusMetric(
     const payload = await monitoringGetJson({
       source: "prometheus",
       connectorName: "Prometheus",
-      baseUrl: env.PROMETHEUS_URL,
+      baseUrl: env.PROMETHEUS_URL ?? "",
       path: "/api/v1/query_range",
       timeoutMs: env.PROMETHEUS_TIMEOUT_MS,
       searchParams,
