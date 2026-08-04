@@ -1,3 +1,7 @@
+// @vitest-environment node
+
+import { describe, expect, it } from "vitest";
+
 import { buildLokiLogQuery } from "./loki";
 
 describe("Loki query builder", () => {
