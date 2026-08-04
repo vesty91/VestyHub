@@ -58,6 +58,7 @@ const envSchema = z
     ALERTMANAGER_TIMEOUT_MS: boundedTimeout(5000),
 
     DOCKER_PROXY_URL: optionalUrl,
+    DOCKER_EXPECTED_HOSTNAME: z.string().trim().max(255).optional().or(z.literal("")),
     DOCKER_CONTROL_ENABLED: strictBoolean(false),
     DOCKER_LOGS_ENABLED: strictBoolean(true),
 
@@ -113,9 +114,17 @@ const envSchema = z
     if (value.DOCKER_CONTROL_ENABLED) {
       ctx.addIssue({
         code: "custom",
-        message:
-          "Docker control is intentionally disabled in Phase 1. Set DOCKER_CONTROL_ENABLED=false.",
+        message: "Docker control is intentionally disabled. Set DOCKER_CONTROL_ENABLED=false.",
         path: ["DOCKER_CONTROL_ENABLED"],
+      });
+    }
+
+    if (value.NODE_ENV === "production" && value.DOCKER_PROXY_URL && !value.DOCKER_EXPECTED_HOSTNAME) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "DOCKER_EXPECTED_HOSTNAME is required in production when Docker monitoring is enabled.",
+        path: ["DOCKER_EXPECTED_HOSTNAME"],
       });
     }
 
