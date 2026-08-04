@@ -109,7 +109,7 @@ export async function getActiveAlerts(): Promise<MonitoringAlert[]> {
     const payload = await monitoringGetJson({
       source: "alertmanager",
       connectorName: "Alertmanager",
-      baseUrl: env.ALERTMANAGER_URL,
+      baseUrl: env.ALERTMANAGER_URL ?? "",
       path: "/api/v2/alerts",
       timeoutMs: env.ALERTMANAGER_TIMEOUT_MS,
       searchParams,
