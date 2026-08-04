@@ -1,0 +1,37 @@
+name: Phase 3C one-shot formatter
+
+on:
+  push:
+    branches:
+      - feat/phase3c-monitoring-observability
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase3c-monitoring-observability
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write src/components/ui/badge.tsx
+      - name: Commit formatting when needed
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ui/badge.tsx
+          git commit -m "style(ui): apply project formatting to badge"
+          git push origin HEAD:feat/phase3c-monitoring-observability
