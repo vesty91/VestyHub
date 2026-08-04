@@ -12,13 +12,18 @@ interface MonitoringRequestOptions {
   searchParams?: URLSearchParams;
 }
 
-function buildMonitoringUrl(baseUrl: string, path: string, searchParams?: URLSearchParams) {
+function buildMonitoringUrl(
+  source: MonitoringSource,
+  baseUrl: string,
+  path: string,
+  searchParams?: URLSearchParams,
+) {
   let base: URL;
   try {
     base = new URL(baseUrl);
   } catch (error) {
     throw new MonitoringConnectorError(
-      "prometheus",
+      source,
       "NOT_CONFIGURED",
       "Monitoring source URL is invalid.",
       { cause: error },
@@ -27,7 +32,7 @@ function buildMonitoringUrl(baseUrl: string, path: string, searchParams?: URLSea
 
   if (base.protocol !== "http:" && base.protocol !== "https:") {
     throw new MonitoringConnectorError(
-      "prometheus",
+      source,
       "NOT_CONFIGURED",
       "Monitoring source URL must use HTTP or HTTPS.",
     );
@@ -51,7 +56,7 @@ async function monitoringGet({
   }
 
   try {
-    const url = buildMonitoringUrl(baseUrl, path, searchParams);
+    const url = buildMonitoringUrl(source, baseUrl, path, searchParams);
     const response = await fetchWithTimeout(url, {
       method: "GET",
       timeoutMs,
