@@ -1,0 +1,40 @@
+name: Phase 3C formatting artifact
+
+on:
+  push:
+    branches:
+      - feat/phase3c-monitoring-observability
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format
+      - name: Package formatted files
+        run: |
+          tar -czf phase3c-formatted.tgz \
+            .env.example \
+            src/app/api/monitoring \
+            'src/app/(dashboard)/monitoring' \
+            src/components/monitoring \
+            src/connectors/monitoring \
+            src/lib/monitoring
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase3c-formatted
+          path: phase3c-formatted.tgz
+          if-no-files-found: error
+          retention-days: 1
