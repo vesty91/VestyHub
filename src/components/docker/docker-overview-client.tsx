@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -36,22 +36,29 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
   const [state, setState] = useState("all");
   const [health, setHealth] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setRefreshing(true);
+    setRefreshError(null);
     try {
       const response = await fetch("/api/docker/overview", { cache: "no-store" });
-      const data = (await response.json()) as DockerOverview;
+      const data = (await response.json()) as DockerOverview | { error?: string };
+      if (!response.ok || !("containers" in data)) {
+        throw new Error(data.error ?? "Actualisation impossible.");
+      }
       setOverview(data);
+    } catch (error) {
+      setRefreshError(error instanceof Error ? error.message : "Actualisation impossible.");
     } finally {
       setRefreshing(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => void refresh(), 15_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [refresh]);
 
   const containers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -59,8 +66,8 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
       const matchesQuery =
         !needle ||
         [container.name, container.image, container.composeProject, container.composeService]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(needle));
+          .filter((value): value is string => Boolean(value))
+          .some((value) => value.toLowerCase().includes(needle));
       const matchesState =
         state === "all" ||
         (state === "running" && container.state === "running") ||
@@ -84,16 +91,18 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
     );
   }
 
+  const stats: Array<[string, number]> = [
+    ["Total", overview.counters.total],
+    ["En cours", overview.counters.running],
+    ["Arrêtés", overview.counters.stopped],
+    ["Non sains", overview.counters.unhealthy],
+    ["Images", overview.engine.images],
+  ];
+
   return (
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {[
-          ["Total", overview.counters.total],
-          ["En cours", overview.counters.running],
-          ["Arrêtés", overview.counters.stopped],
-          ["Non sains", overview.counters.unhealthy],
-          ["Images", overview.engine.images],
-        ].map(([label, value]) => (
+        {stats.map(([label, value]) => (
           <Card key={label}>
             <CardContent>
               <p className="text-xs tracking-[0.14em] text-zinc-600 uppercase">{label}</p>
@@ -151,6 +160,7 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
           <p className="text-xs text-zinc-500" aria-live="polite">
             Dernière actualisation : {new Date(overview.fetchedAt).toLocaleTimeString("fr-FR")}
             {overview.partial ? " · données partielles" : ""}
+            {refreshError ? ` · ${refreshError}` : ""}
           </p>
 
           <div className="grid gap-3 xl:grid-cols-2">
