@@ -54,7 +54,7 @@ function timestampFromNanoseconds(value: string): string | undefined {
   }
 }
 
-function buildLogQuery(source: LokiLogSource, searchText?: string): string {
+export function buildLokiLogQuery(source: LokiLogSource, searchText?: string): string {
   const selector =
     source === "all" ? '{job="docker"}' : `{job="docker",stream="${source}"}`;
   const boundedSearch = searchText?.trim().slice(0, 200);
@@ -113,7 +113,7 @@ export async function getLokiLogs(options: {
   const window = getMonitoringRangeWindow(options.range);
   const limit = Math.min(500, Math.max(1, Math.trunc(options.limit ?? 200)));
   const searchParams = new URLSearchParams({
-    query: buildLogQuery(options.source, options.searchText),
+    query: buildLokiLogQuery(options.source, options.searchText),
     start: `${window.startSeconds}000000000`,
     end: `${window.endSeconds}000000000`,
     limit: String(limit),
