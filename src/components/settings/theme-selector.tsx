@@ -11,7 +11,11 @@ import { cn } from "@/lib/utils";
 const emptySubscribe = () => () => undefined;
 
 export function ThemeSelector() {
-  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const { theme, setTheme } = useTheme();
   const selectedTheme = mounted && isThemeId(theme) ? theme : DEFAULT_THEME;
 
@@ -27,7 +31,11 @@ export function ThemeSelector() {
         icon={<Palette className="size-4" />}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Thème VestyHub">
+      <div
+        className="grid gap-3 sm:grid-cols-2"
+        role="radiogroup"
+        aria-label="Thème VestyHub"
+      >
         {THEMES.map((item) => {
           const active = selectedTheme === item.id;
 
@@ -39,7 +47,7 @@ export function ThemeSelector() {
               aria-checked={active}
               onClick={() => selectTheme(item.id)}
               className={cn(
-                "focus-visible:ring-ring group rounded-xl border p-3 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                "focus-visible:ring-ring group focus-visible:ring-offset-background rounded-xl border p-3 text-left transition outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                 active
                   ? "border-primary/55 bg-primary/[0.08] shadow-[0_0_0_1px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
                   : "border-border/70 bg-card/45 hover:border-primary/30 hover:bg-card/75",
@@ -50,9 +58,9 @@ export function ThemeSelector() {
                 className="border-border/80 bg-background relative h-20 overflow-hidden rounded-lg border"
                 aria-hidden="true"
               >
-                <div className="bg-sidebar absolute inset-y-0 left-0 w-5 border-r border-border" />
-                <div className="bg-card absolute top-3 right-3 left-8 h-5 rounded border border-border" />
-                <div className="bg-card absolute right-3 bottom-3 left-8 h-7 rounded border border-border" />
+                <div className="bg-sidebar border-border absolute inset-y-0 left-0 w-5 border-r" />
+                <div className="bg-card border-border absolute top-3 right-3 left-8 h-5 rounded border" />
+                <div className="bg-card border-border absolute right-3 bottom-3 left-8 h-7 rounded border" />
                 <span className="bg-primary absolute top-5 right-5 size-2 rounded-full" />
                 <span className="bg-success absolute right-5 bottom-5 h-1.5 w-8 rounded-full" />
               </div>
@@ -60,7 +68,9 @@ export function ThemeSelector() {
               <div className="mt-3 flex items-start justify-between gap-3">
                 <div>
                   <span className="text-sm font-medium">{item.label}</span>
-                  <p className="text-muted-foreground mt-1 text-xs leading-5">{item.description}</p>
+                  <p className="text-muted-foreground mt-1 text-xs leading-5">
+                    {item.description}
+                  </p>
                 </div>
                 <span
                   className={cn(
