@@ -47,14 +47,11 @@ function inferLevel(
 }
 
 function timestampFromNanoseconds(value: string): string | undefined {
-  try {
-    const milliseconds = Number(BigInt(value) / 1_000_000n);
-    if (!Number.isFinite(milliseconds)) return undefined;
-    const date = new Date(milliseconds);
-    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-  } catch {
-    return undefined;
-  }
+  const nanoseconds = Number(value);
+  if (!Number.isFinite(nanoseconds) || nanoseconds <= 0) return undefined;
+
+  const date = new Date(nanoseconds / 1_000_000);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 export function buildLokiLogQuery(source: LokiLogSource, searchText?: string): string {
@@ -126,7 +123,7 @@ export async function getLokiLogs(options: {
   const payload = await monitoringGetJson({
     source: "loki",
     connectorName: "Loki",
-    baseUrl: env.LOKI_URL,
+    baseUrl: env.LOKI_URL ?? "",
     path: "/loki/api/v1/query_range",
     timeoutMs: env.LOKI_TIMEOUT_MS,
     searchParams,
