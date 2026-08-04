@@ -119,15 +119,6 @@ const envSchema = z
       });
     }
 
-    if (value.NODE_ENV === "production" && value.DOCKER_PROXY_URL && !value.DOCKER_EXPECTED_HOSTNAME) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          "DOCKER_EXPECTED_HOSTNAME is required in production when Docker monitoring is enabled.",
-        path: ["DOCKER_EXPECTED_HOSTNAME"],
-      });
-    }
-
     if (value.SYNOLOGY_ENABLED) {
       if (value.SYNOLOGY_MODE === "prometheus") {
         if (!value.PROMETHEUS_URL) {
