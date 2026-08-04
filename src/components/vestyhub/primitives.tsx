@@ -45,7 +45,9 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+      ) : null}
     </header>
   );
 }
@@ -102,7 +104,9 @@ export function PanelHeader({
         ) : null}
         <div className="min-w-0">
           <h2 className="font-medium tracking-tight">{title}</h2>
-          {subtitle ? <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p> : null}
+          {subtitle ? (
+            <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p>
+          ) : null}
         </div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -127,7 +131,11 @@ export function StatusDot({
 
   return (
     <span
-      className={cn("inline-flex items-center gap-2 text-xs font-medium", toneClass, className)}
+      className={cn(
+        "inline-flex items-center gap-2 text-xs font-medium",
+        toneClass,
+        className,
+      )}
       role="status"
     >
       <span className="relative flex size-2" aria-hidden="true">
@@ -177,7 +185,9 @@ export function StatCard({
         </span>
       ) : null}
       <p className="text-muted-foreground text-xs tracking-[0.16em] uppercase">{label}</p>
-      <p className={cn("mt-3 text-3xl font-semibold tracking-tight", toneClass)}>{value}</p>
+      <p className={cn("mt-3 text-3xl font-semibold tracking-tight", toneClass)}>
+        {value}
+      </p>
       {normalizedProgress !== undefined ? (
         <div className="bg-secondary mt-3 h-1.5 overflow-hidden rounded-full">
           <div
