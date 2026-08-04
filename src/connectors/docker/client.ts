@@ -69,6 +69,7 @@ const dockerInspectSchema = z
     State: z
       .object({
         StartedAt: z.string().optional(),
+        FinishedAt: z.string().optional(),
         Health: z.object({ Status: z.string() }).optional(),
       })
       .passthrough(),
@@ -159,6 +160,38 @@ function normalizeHealth(value?: string): DockerHealthStatus {
   return "unknown";
 }
 
+function parseDockerTimestamp(value?: string): number | undefined {
+  if (!value) return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : undefined;
+}
+
+export function calculateUptimeSeconds(
+  state: DockerContainerState,
+  startedAt?: string,
+  finishedAt?: string,
+  nowMs = Date.now(),
+): number | undefined {
+  if (state === "created") return undefined;
+
+  const startedMs = parseDockerTimestamp(startedAt);
+  if (startedMs === undefined) return undefined;
+
+  if (state === "running" || state === "restarting" || state === "paused") {
+    if (!Number.isFinite(nowMs)) return undefined;
+    return Math.max(0, Math.floor((nowMs - startedMs) / 1000));
+  }
+
+  if (state !== "exited" && state !== "dead" && state !== "removing") {
+    return undefined;
+  }
+
+  const finishedMs = parseDockerTimestamp(finishedAt);
+  if (finishedMs === undefined || finishedMs < startedMs) return undefined;
+
+  return Math.floor((finishedMs - startedMs) / 1000);
+}
+
 export function sanitizeServiceUrl(value?: string): string | undefined {
   if (!value) return undefined;
   try {
@@ -192,6 +225,7 @@ async function enrichContainer(
   container: z.infer<typeof dockerContainerSchema>,
 ): Promise<DockerContainer> {
   const id = container.Id;
+  const state = normalizeState(container.State);
   const warnings: string[] = [];
   let inspect: z.infer<typeof dockerInspectSchema> | undefined;
   let stats: z.infer<typeof dockerStatsSchema> | undefined;
@@ -204,7 +238,7 @@ async function enrichContainer(
     warnings.push("Inspection indisponible");
   }
 
-  if (container.State === "running") {
+  if (state === "running") {
     try {
       stats = await statsCache.getOrSet(id, () =>
         dockerGet(
@@ -218,11 +252,14 @@ async function enrichContainer(
   }
 
   const labels = inspect?.Config.Labels ?? {};
-  const startedAt = inspect?.State.StartedAt;
-  const startedMs = startedAt ? Date.parse(startedAt) : Number.NaN;
-  const uptimeSeconds = Number.isFinite(startedMs)
-    ? Math.max(0, Math.floor((Date.now() - startedMs) / 1000))
-    : undefined;
+  const rawStartedAt = inspect?.State.StartedAt;
+  const startedAt =
+    parseDockerTimestamp(rawStartedAt) === undefined ? undefined : rawStartedAt;
+  const uptimeSeconds = calculateUptimeSeconds(
+    state,
+    startedAt,
+    inspect?.State.FinishedAt,
+  );
   const cpuPercent = calculateCpuPercent(stats?.cpu_stats, stats?.precpu_stats);
   const memory = calculateMemoryMetrics(stats?.memory_stats);
   const metricsAvailable = Boolean(stats);
@@ -231,7 +268,7 @@ async function enrichContainer(
     id: id.slice(0, 12),
     name: container.Names[0]?.replace(/^\//, "") || id.slice(0, 12),
     image: container.Image,
-    state: normalizeState(container.State),
+    state,
     health: normalizeHealth(inspect?.State.Health?.Status),
     status: container.Status,
     createdAt: new Date(container.Created * 1000).toISOString(),
