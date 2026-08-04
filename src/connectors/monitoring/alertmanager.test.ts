@@ -1,3 +1,7 @@
+// @vitest-environment node
+
+import { describe, expect, it } from "vitest";
+
 import { summarizeAlerts } from "./alertmanager";
 import type { MonitoringAlert } from "./types";
 
