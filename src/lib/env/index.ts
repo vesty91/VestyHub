@@ -58,6 +58,7 @@ const envSchema = z
     ALERTMANAGER_TIMEOUT_MS: boundedTimeout(5000),
 
     DOCKER_PROXY_URL: optionalUrl,
+    DOCKER_EXPECTED_HOSTNAME: z.string().trim().max(255).optional().or(z.literal("")),
     DOCKER_CONTROL_ENABLED: strictBoolean(false),
     DOCKER_LOGS_ENABLED: strictBoolean(true),
 
@@ -114,7 +115,7 @@ const envSchema = z
       ctx.addIssue({
         code: "custom",
         message:
-          "Docker control is intentionally disabled in Phase 1. Set DOCKER_CONTROL_ENABLED=false.",
+          "Docker control is intentionally disabled. Set DOCKER_CONTROL_ENABLED=false.",
         path: ["DOCKER_CONTROL_ENABLED"],
       });
     }
