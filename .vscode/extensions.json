@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "redhat.vscode-yaml",
+    "docker.docker",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "ms-ossdata.vscode-pgsql",
+    "EditorConfig.EditorConfig",
+    "vitest.explorer",
+    "ms-playwright.playwright"
+  ]
+}

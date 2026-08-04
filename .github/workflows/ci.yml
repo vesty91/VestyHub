@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      APP_NAME: VestyHub
+      APP_URL: http://127.0.0.1:3000
+      APP_PORT: "3000"
+      APP_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      AUTH_SECRET: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      DATABASE_URL: postgresql://vestyhub:vestyhub@127.0.0.1:5432/vestyhub
+      AUTH_LOCAL_ENABLED: "true"
+      AUTHENTIK_ENABLED: "false"
+      DOCKER_CONTROL_ENABLED: "false"
+      DOCKER_LOGS_ENABLED: "true"
+      SYNOLOGY_ENABLED: "false"
+      SYNOLOGY_VERIFY_TLS: "true"
+      DEMO_MODE: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+      - run: pnpm build

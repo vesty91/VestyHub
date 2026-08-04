@@ -1,0 +1,12 @@
+---
+description: Règles de sécurité pour l'authentification, les sessions et les favoris VestyHub.
+alwaysApply: true
+---
+
+- Toute Server Action doit vérifier elle-même la session et le rôle requis.
+- Ne jamais accepter un userId transmis par le client pour déterminer le propriétaire d'une ressource.
+- Ne jamais stocker le jeton de session brut en base : utiliser son empreinte SHA-256.
+- Ne jamais journaliser mot de passe, cookie, jeton de session, URL avec identifiants ou contenu de secret.
+- Les actions Docker restent interdites ; le proxy conserve POST=0.
+- Les favoris doivent accepter uniquement des URL HTTP/HTTPS et vérifier l'appartenance du groupe.
+- Un fichier avec `use server` ne doit exporter que des fonctions async ; placer les états et types dans un module séparé.
