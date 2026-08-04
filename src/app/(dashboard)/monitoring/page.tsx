@@ -143,7 +143,10 @@ export default async function MonitoringPage({
             subtitle={`Historique sur ${range}`}
             icon={<Gauge className="size-4" />}
           />
-          <TimeSeriesChart title="Historique CPU" series={overview.metrics["host.cpu.usage"] ?? []} />
+          <TimeSeriesChart
+            title="Historique CPU"
+            series={overview.metrics["host.cpu.usage"] ?? []}
+          />
         </Panel>
         <Panel>
           <PanelHeader
@@ -176,7 +179,10 @@ export default async function MonitoringPage({
             subtitle="Lecture Alertmanager"
             icon={<BellRing className="size-4" />}
             action={
-              <Link href="/monitoring/alerts" className="text-primary text-xs font-medium">
+              <Link
+                href="/monitoring/alerts"
+                className="text-primary text-xs font-medium"
+              >
                 Voir les alertes
               </Link>
             }
@@ -219,7 +225,8 @@ export default async function MonitoringPage({
               >
                 <Activity className="text-warning mt-0.5 size-4 shrink-0" />
                 <span>
-                  <strong className="text-foreground capitalize">{warning.source}</strong> — {warning.message}
+                  <strong className="text-foreground capitalize">{warning.source}</strong>{" "}
+                  — {warning.message}
                 </span>
               </li>
             ))}
@@ -228,7 +235,11 @@ export default async function MonitoringPage({
       ) : null}
 
       <p className="text-muted-foreground text-right text-xs">
-        Généré le {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(overview.generatedAt))}
+        Généré le{" "}
+        {new Intl.DateTimeFormat("fr-FR", {
+          dateStyle: "short",
+          timeStyle: "medium",
+        }).format(new Date(overview.generatedAt))}
       </p>
     </div>
   );

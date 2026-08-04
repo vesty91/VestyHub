@@ -2,7 +2,12 @@ import Link from "next/link";
 import { AlertTriangle, BellRing, Clock3 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { PageHeader, Panel, PanelHeader, StatusDot } from "@/components/vestyhub/primitives";
+import {
+  PageHeader,
+  Panel,
+  PanelHeader,
+  StatusDot,
+} from "@/components/vestyhub/primitives";
 import {
   getActiveAlerts,
   getAlertmanagerStatus,
@@ -39,7 +44,11 @@ function AlertCard({ alert }: { alert: MonitoringAlert }) {
           {alert.startsAt ? (
             <span className="inline-flex items-center gap-1.5">
               <Clock3 className="size-3.5" />
-              Depuis le {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(alert.startsAt))}
+              Depuis le{" "}
+              {new Intl.DateTimeFormat("fr-FR", {
+                dateStyle: "short",
+                timeStyle: "medium",
+              }).format(new Date(alert.startsAt))}
             </span>
           ) : null}
           <span className="capitalize">Sévérité : {alert.severity}</span>

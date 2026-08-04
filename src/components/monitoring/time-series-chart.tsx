@@ -53,7 +53,9 @@ export function TimeSeriesChart({ title, series, height = 280 }: TimeSeriesChart
       tooltip: {
         trigger: "axis",
         valueFormatter: (value: unknown) =>
-          typeof value === "number" ? value.toLocaleString("fr-FR", { maximumFractionDigits: 2 }) : String(value),
+          typeof value === "number"
+            ? value.toLocaleString("fr-FR", { maximumFractionDigits: 2 })
+            : String(value),
       },
       legend: {
         show: series.length > 1,
@@ -105,5 +107,13 @@ export function TimeSeriesChart({ title, series, height = 280 }: TimeSeriesChart
     );
   }
 
-  return <div ref={containerRef} style={{ height }} className="w-full" role="img" aria-label={title} />;
+  return (
+    <div
+      ref={containerRef}
+      style={{ height }}
+      className="w-full"
+      role="img"
+      aria-label={title}
+    />
+  );
 }

@@ -52,7 +52,11 @@ async function monitoringGet({
   searchParams,
 }: MonitoringRequestOptions): Promise<Response> {
   if (!baseUrl) {
-    throw new MonitoringConnectorError(source, "NOT_CONFIGURED", "Source not configured.");
+    throw new MonitoringConnectorError(
+      source,
+      "NOT_CONFIGURED",
+      "Source not configured.",
+    );
   }
 
   try {

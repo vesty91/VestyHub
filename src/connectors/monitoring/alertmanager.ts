@@ -13,7 +13,10 @@ import type {
   MonitoringSourceStatus,
 } from "./types";
 
-const alertsCache = new ShortTtlCache<MonitoringAlert[]>({ ttlMs: 10_000, maxEntries: 4 });
+const alertsCache = new ShortTtlCache<MonitoringAlert[]>({
+  ttlMs: 10_000,
+  maxEntries: 4,
+});
 
 const alertmanagerAlertSchema = z
   .object({

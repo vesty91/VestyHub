@@ -27,7 +27,10 @@ import { assertServerOnly } from "@/lib/security/assert-server";
 
 assertServerOnly("lib/monitoring/service");
 
-const overviewCache = new ShortTtlCache<MonitoringOverview>({ ttlMs: 10_000, maxEntries: 8 });
+const overviewCache = new ShortTtlCache<MonitoringOverview>({
+  ttlMs: 10_000,
+  maxEntries: 8,
+});
 const metricIds = Object.keys(PROMETHEUS_METRICS) as PrometheusMetricId[];
 
 function warningForError(source: MonitoringSource, error: unknown): MonitoringWarning {
@@ -39,7 +42,9 @@ function warningForError(source: MonitoringSource, error: unknown): MonitoringWa
   };
 }
 
-async function loadMonitoringOverview(range: MonitoringRange): Promise<MonitoringOverview> {
+async function loadMonitoringOverview(
+  range: MonitoringRange,
+): Promise<MonitoringOverview> {
   const generatedAt = new Date().toISOString();
   const warnings: MonitoringWarning[] = [];
   const [prometheusStatus, lokiStatus, alertmanagerStatus] = await Promise.all([
@@ -51,7 +56,10 @@ async function loadMonitoringOverview(range: MonitoringRange): Promise<Monitorin
   const metrics: Record<string, TimeSeries[]> = {};
   if (prometheusStatus.available) {
     const metricResults = await Promise.allSettled(
-      metricIds.map(async (metricId) => [metricId, await queryPrometheusMetric(metricId, range)] as const),
+      metricIds.map(
+        async (metricId) =>
+          [metricId, await queryPrometheusMetric(metricId, range)] as const,
+      ),
     );
 
     metricResults.forEach((result, index) => {
@@ -73,9 +81,7 @@ async function loadMonitoringOverview(range: MonitoringRange): Promise<Monitorin
     warnings.push({
       source: "prometheus",
       code: prometheusStatus.errorCode ?? "UNREACHABLE",
-      message: publicMonitoringErrorMessage(
-        prometheusStatus.errorCode ?? "UNREACHABLE",
-      ),
+      message: publicMonitoringErrorMessage(prometheusStatus.errorCode ?? "UNREACHABLE"),
     });
   }
 

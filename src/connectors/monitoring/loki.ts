@@ -29,7 +29,10 @@ const lokiStreamsSchema = z.object({
   }),
 });
 
-function inferLevel(labels: Record<string, string>, message: string): MonitoringLogEntry["level"] {
+function inferLevel(
+  labels: Record<string, string>,
+  message: string,
+): MonitoringLogEntry["level"] {
   const labelLevel = (labels.level ?? "").toLowerCase();
   if (["debug", "info", "warn", "error"].includes(labelLevel)) {
     return labelLevel as MonitoringLogEntry["level"];
@@ -140,7 +143,11 @@ export async function getLokiLogs(options: {
           {
             id: `${rawTimestamp}:${streamIndex}:${lineIndex}`,
             timestamp,
-            source: stream.stream.container ?? stream.stream.service ?? stream.stream.job ?? "docker",
+            source:
+              stream.stream.container ??
+              stream.stream.service ??
+              stream.stream.job ??
+              "docker",
             level: inferLevel(stream.stream, message),
             message,
             labels: stream.stream,

@@ -2,7 +2,12 @@ import Link from "next/link";
 import { Activity, Search, TerminalSquare } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { PageHeader, Panel, PanelHeader, StatusDot } from "@/components/vestyhub/primitives";
+import {
+  PageHeader,
+  Panel,
+  PanelHeader,
+  StatusDot,
+} from "@/components/vestyhub/primitives";
 import {
   getLokiLogs,
   getLokiStatus,
@@ -156,8 +161,14 @@ export default async function MonitoringLogsPage({
         ) : (
           <ol className="divide-border overflow-hidden rounded-xl border">
             {logs.map((entry) => (
-              <li key={entry.id} className="bg-card hover:bg-muted/20 grid gap-2 px-4 py-3 md:grid-cols-[190px_100px_1fr]">
-                <time dateTime={entry.timestamp} className="text-muted-foreground font-mono text-xs">
+              <li
+                key={entry.id}
+                className="bg-card hover:bg-muted/20 grid gap-2 px-4 py-3 md:grid-cols-[190px_100px_1fr]"
+              >
+                <time
+                  dateTime={entry.timestamp}
+                  className="text-muted-foreground font-mono text-xs"
+                >
                   {new Intl.DateTimeFormat("fr-FR", {
                     dateStyle: "short",
                     timeStyle: "medium",
@@ -166,7 +177,7 @@ export default async function MonitoringLogsPage({
                 <StatusDot label={entry.level} tone={levelTone(entry.level)} />
                 <div className="min-w-0">
                   <p className="text-muted-foreground mb-1 text-xs">{entry.source}</p>
-                  <pre className="text-foreground overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs leading-5">
+                  <pre className="text-foreground overflow-x-auto font-mono text-xs leading-5 break-words whitespace-pre-wrap">
                     {entry.message}
                   </pre>
                 </div>

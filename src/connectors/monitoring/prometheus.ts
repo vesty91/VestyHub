@@ -13,7 +13,10 @@ import type {
   TimeSeriesUnit,
 } from "./types";
 
-const prometheusCache = new ShortTtlCache<TimeSeries[]>({ ttlMs: 15_000, maxEntries: 40 });
+const prometheusCache = new ShortTtlCache<TimeSeries[]>({
+  ttlMs: 15_000,
+  maxEntries: 40,
+});
 
 const sampleSchema = z.tuple([z.union([z.number(), z.string()]), z.string()]);
 const matrixSeriesSchema = z.object({
@@ -32,14 +35,12 @@ export const PROMETHEUS_METRICS = {
   "host.cpu.usage": {
     label: "CPU global",
     unit: "percent",
-    query:
-      '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
+    query: '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
   },
   "host.memory.usage": {
     label: "Mémoire utilisée",
     unit: "percent",
-    query:
-      "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+    query: "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
   },
   "host.filesystem.usage": {
     label: "Occupation stockage maximale",

@@ -3,11 +3,7 @@ export const MONITORING_RANGES = ["1h", "6h", "24h", "7d"] as const;
 export type MonitoringRange = (typeof MONITORING_RANGES)[number];
 export type MonitoringSource = "prometheus" | "loki" | "alertmanager";
 export type MonitoringErrorCode =
-  | "NOT_CONFIGURED"
-  | "TIMEOUT"
-  | "UNREACHABLE"
-  | "HTTP_ERROR"
-  | "INVALID_RESPONSE";
+  "NOT_CONFIGURED" | "TIMEOUT" | "UNREACHABLE" | "HTTP_ERROR" | "INVALID_RESPONSE";
 
 export interface MonitoringSourceStatus {
   source: MonitoringSource;
@@ -19,11 +15,7 @@ export interface MonitoringSourceStatus {
 }
 
 export type TimeSeriesUnit =
-  | "percent"
-  | "bytes"
-  | "bytes_per_second"
-  | "count"
-  | "seconds";
+  "percent" | "bytes" | "bytes_per_second" | "count" | "seconds";
 
 export interface TimeSeriesPoint {
   timestamp: number;
