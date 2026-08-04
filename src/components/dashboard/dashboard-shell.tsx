@@ -21,8 +21,8 @@ import {
 import { logoutAction } from "@/app/(dashboard)/actions";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { AuthenticatedUser } from "@/lib/auth/types";
+import { cn } from "@/lib/utils";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -43,14 +43,14 @@ function Sidebar({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-20 items-center gap-3 px-5">
-        <div className="grid size-10 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10">
-          <MonitorCog className="size-5 text-cyan-300" />
+        <div className="border-sidebar-primary/20 bg-sidebar-primary/10 grid size-10 place-items-center rounded-2xl border">
+          <MonitorCog className="text-sidebar-primary size-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold tracking-[0.22em] text-cyan-300">
+          <p className="text-sidebar-primary text-sm font-semibold tracking-[0.22em]">
             VESTYHUB
           </p>
-          <p className="text-[11px] text-zinc-500">CONTROL CENTER</p>
+          <p className="text-sidebar-foreground/55 text-[11px]">CONTROL CENTER</p>
         </div>
       </div>
 
@@ -63,10 +63,10 @@ function Sidebar({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "group flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition",
+                "group flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
                 active
-                  ? "bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/15"
-                  : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground ring-sidebar-primary/20 ring-1"
+                  : "text-sidebar-foreground/55 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
               )}
             >
               <item.icon className="size-4" />
@@ -77,13 +77,13 @@ function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/[0.07] p-4">
-        <div className="rounded-xl bg-white/[0.035] p-3">
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
-            <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+      <div className="border-sidebar-border border-t p-4">
+        <div className="bg-sidebar-accent/45 rounded-xl p-3">
+          <div className="text-sidebar-foreground/70 flex items-center gap-2 text-xs">
+            <span className="bg-success size-2 rounded-full shadow-[0_0_12px_color-mix(in_oklch,var(--success)_75%,transparent)]" />
             Mode sécurisé
           </div>
-          <p className="mt-2 text-[11px] leading-5 text-zinc-600">
+          <p className="text-sidebar-foreground/45 mt-2 text-[11px] leading-5">
             Docker reste strictement en lecture seule.
           </p>
         </div>
@@ -104,7 +104,7 @@ export function DashboardShell({
 
   return (
     <div className="bg-background text-foreground min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-white/[0.07] bg-[#080b10] lg:block">
+      <aside className="border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-30 hidden w-64 border-r transition-colors lg:block">
         <Sidebar pathname={pathname} />
       </aside>
 
@@ -116,11 +116,11 @@ export function DashboardShell({
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative h-full w-72 border-r border-white/10 bg-[#080b10] shadow-2xl">
+          <aside className="border-sidebar-border bg-sidebar text-sidebar-foreground relative h-full w-72 border-r shadow-2xl transition-colors">
             <button
               type="button"
               aria-label="Fermer le menu"
-              className="absolute top-3 right-3 rounded-lg p-2 text-zinc-500 hover:bg-white/5 hover:text-white"
+              className="text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground absolute top-3 right-3 rounded-lg p-2 transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               <X className="size-4" />
@@ -131,7 +131,7 @@ export function DashboardShell({
       ) : null}
 
       <div className="lg:pl-64">
-        <header className="bg-background/85 sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/[0.07] px-4 backdrop-blur-xl sm:px-6">
+        <header className="bg-background/85 border-border sticky top-0 z-20 flex h-16 items-center gap-3 border-b px-4 backdrop-blur-xl transition-colors sm:px-6">
           <Button
             type="button"
             variant="ghost"
@@ -145,7 +145,7 @@ export function DashboardShell({
 
           <Link
             href="/favorites"
-            className="relative hidden h-9 max-w-md flex-1 items-center rounded-xl border border-white/[0.07] bg-white/[0.025] pr-3 pl-9 text-sm text-zinc-600 transition hover:border-cyan-400/20 hover:text-zinc-400 md:flex"
+            className="border-border bg-card/45 text-muted-foreground hover:border-primary/30 hover:text-foreground relative hidden h-9 max-w-md flex-1 items-center rounded-xl border pr-3 pl-9 text-sm transition-colors md:flex"
           >
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             Rechercher dans les favoris…
@@ -153,12 +153,12 @@ export function DashboardShell({
 
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
-            <div className="hidden h-8 w-px bg-white/[0.07] sm:block" />
+            <div className="bg-border hidden h-8 w-px sm:block" />
             <div className="hidden text-right sm:block">
               <p className="max-w-44 truncate text-sm font-medium">{user.name}</p>
-              <p className="text-[11px] text-zinc-500">{user.role}</p>
+              <p className="text-muted-foreground text-[11px]">{user.role}</p>
             </div>
-            <div className="grid size-9 place-items-center rounded-xl bg-cyan-300/10 text-sm font-semibold text-cyan-200 ring-1 ring-cyan-300/15">
+            <div className="bg-primary/10 text-primary ring-primary/20 grid size-9 place-items-center rounded-xl text-sm font-semibold ring-1">
               {user.name.slice(0, 1).toUpperCase()}
             </div>
             <form action={logoutAction}>
@@ -167,7 +167,7 @@ export function DashboardShell({
                 variant="ghost"
                 size="icon"
                 aria-label="Se déconnecter"
-                className="text-zinc-500 hover:text-red-300"
+                className="text-muted-foreground hover:text-destructive"
               >
                 <LogOut className="size-4" />
               </Button>
