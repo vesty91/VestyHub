@@ -1,0 +1,4 @@
+services:
+  app:
+    environment:
+      DOCKER_EXPECTED_HOSTNAME: ${DOCKER_EXPECTED_HOSTNAME:?DOCKER_EXPECTED_HOSTNAME must identify the NAS Docker engine}
