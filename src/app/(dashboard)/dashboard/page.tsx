@@ -104,9 +104,9 @@ export default async function DashboardPage() {
           },
           {
             label: "Conteneurs Docker",
-            value: docker.available ? (docker.engine?.containers ?? 0) : "—",
+            value: docker.available ? docker.counters.total : "—",
             detail: docker.available
-              ? `${docker.engine?.running ?? 0} en cours`
+              ? `${docker.counters.running} en cours`
               : "Proxy indisponible",
             icon: Container,
           },
@@ -199,12 +199,12 @@ export default async function DashboardPage() {
                 {[
                   {
                     label: "Actifs",
-                    value: docker.engine.running,
+                    value: docker.counters.running,
                     color: "text-emerald-300",
                   },
                   {
                     label: "Arrêtés",
-                    value: docker.engine.stopped,
+                    value: docker.counters.stopped,
                     color: "text-zinc-300",
                   },
                   {

@@ -247,9 +247,7 @@ async function enrichContainer(
     composeProject: labels["com.docker.compose.project"],
     composeService: labels["com.docker.compose.service"],
     serviceUrl: sanitizeServiceUrl(labels["vestyhub.url"] ?? labels["homepage.href"]),
-    metrics: metricsAvailable
-      ? { cpuPercent, ...memory }
-      : undefined,
+    metrics: metricsAvailable ? { cpuPercent, ...memory } : undefined,
     metricsAvailable,
     warning: warnings.length ? warnings.join(" · ") : undefined,
   };
@@ -303,7 +301,8 @@ async function loadDockerOverview(): Promise<DockerOverview> {
         running: info.ContainersRunning,
         paused: info.ContainersPaused,
         stopped: info.ContainersStopped,
-        unhealthy: containers.filter((container) => container.health === "unhealthy").length,
+        unhealthy: containers.filter((container) => container.health === "unhealthy")
+          .length,
       },
       containers,
       warnings,

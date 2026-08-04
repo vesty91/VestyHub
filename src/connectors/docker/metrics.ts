@@ -40,9 +40,7 @@ export function calculateCpuPercent(
 export function calculateMemoryMetrics(memoryStats: MemoryStatsLike | undefined) {
   const usage = finiteNonNegative(memoryStats?.usage ?? 0);
   const inactive = finiteNonNegative(
-    memoryStats?.stats?.inactive_file ??
-      memoryStats?.stats?.total_inactive_file ??
-      0,
+    memoryStats?.stats?.inactive_file ?? memoryStats?.stats?.total_inactive_file ?? 0,
   );
   const memoryUsageBytes = Math.max(0, usage - inactive);
   const memoryLimitBytes = finiteNonNegative(memoryStats?.limit ?? 0);

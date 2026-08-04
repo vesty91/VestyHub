@@ -9,11 +9,7 @@ export type DockerContainerState =
   | "unknown";
 
 export type DockerHealthStatus =
-  | "healthy"
-  | "unhealthy"
-  | "starting"
-  | "none"
-  | "unknown";
+  "healthy" | "unhealthy" | "starting" | "none" | "unknown";
 
 export interface DockerPort {
   ip?: string;

@@ -18,7 +18,8 @@ export default async function DockerPage() {
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">Docker</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Inventaire du moteur Docker du NAS via un proxy sécurisé, sans contrôle des conteneurs.
+          Inventaire du moteur Docker du NAS via un proxy sécurisé, sans contrôle des
+          conteneurs.
         </p>
       </header>
 

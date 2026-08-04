@@ -114,7 +114,8 @@ const envSchema = z
     if (value.DOCKER_CONTROL_ENABLED) {
       ctx.addIssue({
         code: "custom",
-        message: "Docker control is intentionally disabled. Set DOCKER_CONTROL_ENABLED=false.",
+        message:
+          "Docker control is intentionally disabled. Set DOCKER_CONTROL_ENABLED=false.",
         path: ["DOCKER_CONTROL_ENABLED"],
       });
     }

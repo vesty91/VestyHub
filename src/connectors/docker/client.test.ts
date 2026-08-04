@@ -1,12 +1,12 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 
 import { sanitizeServiceUrl } from "./client";
 
 describe("sanitizeServiceUrl", () => {
   it("accepts HTTP and HTTPS URLs", () => {
-    expect(sanitizeServiceUrl("http://nas.local:3000")).toBe(
-      "http://nas.local:3000/",
-    );
+    expect(sanitizeServiceUrl("http://nas.local:3000")).toBe("http://nas.local:3000/");
     expect(sanitizeServiceUrl("https://service.example.test/path")).toBe(
       "https://service.example.test/path",
     );

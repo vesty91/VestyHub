@@ -1,6 +1,6 @@
 import { Activity, Container, Database, ShieldCheck } from "lucide-react";
 
-import type { DockerOverview } from "@/connectors/docker/client";
+import type { DockerOverview } from "@/connectors/docker/types";
 
 export function StatusWidget({
   docker,

@@ -49,7 +49,9 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
       }
       setOverview(data);
     } catch (error) {
-      setRefreshError(error instanceof Error ? error.message : "Actualisation impossible.");
+      setRefreshError(
+        error instanceof Error ? error.message : "Actualisation impossible.",
+      );
     } finally {
       setRefreshing(false);
     }
@@ -65,7 +67,12 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
     return overview.containers.filter((container) => {
       const matchesQuery =
         !needle ||
-        [container.name, container.image, container.composeProject, container.composeService]
+        [
+          container.name,
+          container.image,
+          container.composeProject,
+          container.composeService,
+        ]
           .filter((value): value is string => Boolean(value))
           .some((value) => value.toLowerCase().includes(needle));
       const matchesState =
@@ -158,14 +165,18 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
           </div>
 
           <p className="text-xs text-zinc-500" aria-live="polite">
-            Dernière actualisation : {new Date(overview.fetchedAt).toLocaleTimeString("fr-FR")}
+            Dernière actualisation :{" "}
+            {new Date(overview.fetchedAt).toLocaleTimeString("fr-FR")}
             {overview.partial ? " · données partielles" : ""}
             {refreshError ? ` · ${refreshError}` : ""}
           </p>
 
           <div className="grid gap-3 xl:grid-cols-2">
             {containers.map((container) => (
-              <article key={container.id} className="rounded-xl border border-white/[0.07] p-4">
+              <article
+                key={container.id}
+                className="rounded-xl border border-white/[0.07] p-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h2 className="truncate font-medium">{container.name}</h2>
@@ -174,10 +185,30 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
                   <Badge>{stateLabel(container)}</Badge>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                  <div><dt className="text-zinc-500">Uptime</dt><dd>{formatUptime(container.uptimeSeconds)}</dd></div>
-                  <div><dt className="text-zinc-500">Redémarrages</dt><dd>{container.restartCount}</dd></div>
-                  <div><dt className="text-zinc-500">CPU</dt><dd>{container.metrics ? `${container.metrics.cpuPercent.toFixed(1)} %` : "—"}</dd></div>
-                  <div><dt className="text-zinc-500">RAM</dt><dd>{container.metrics ? `${formatBytes(container.metrics.memoryUsageBytes)} / ${formatBytes(container.metrics.memoryLimitBytes)}` : "—"}</dd></div>
+                  <div>
+                    <dt className="text-zinc-500">Uptime</dt>
+                    <dd>{formatUptime(container.uptimeSeconds)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-500">Redémarrages</dt>
+                    <dd>{container.restartCount}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-500">CPU</dt>
+                    <dd>
+                      {container.metrics
+                        ? `${container.metrics.cpuPercent.toFixed(1)} %`
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-500">RAM</dt>
+                    <dd>
+                      {container.metrics
+                        ? `${formatBytes(container.metrics.memoryUsageBytes)} / ${formatBytes(container.metrics.memoryLimitBytes)}`
+                        : "—"}
+                    </dd>
+                  </div>
                 </dl>
                 <p className="mt-3 text-xs text-zinc-500">
                   {container.composeProject && container.composeService
@@ -185,9 +216,17 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
                     : "Hors projet Compose"}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Ports : {container.ports.filter((port) => port.publicPort).map((port) => `${port.publicPort}:${port.privatePort}/${port.protocol}`).join(", ") || "—"}
+                  Ports :{" "}
+                  {container.ports
+                    .filter((port) => port.publicPort)
+                    .map(
+                      (port) => `${port.publicPort}:${port.privatePort}/${port.protocol}`,
+                    )
+                    .join(", ") || "—"}
                 </p>
-                {container.warning ? <p className="mt-2 text-xs text-amber-300">{container.warning}</p> : null}
+                {container.warning ? (
+                  <p className="mt-2 text-xs text-amber-300">{container.warning}</p>
+                ) : null}
                 {container.serviceUrl ? (
                   <Button asChild variant="ghost" className="mt-3">
                     <a href={container.serviceUrl} target="_blank" rel="noreferrer">
@@ -198,7 +237,11 @@ export function DockerOverviewClient({ initial }: { initial: DockerOverview }) {
               </article>
             ))}
           </div>
-          {containers.length === 0 ? <p className="py-10 text-center text-sm text-zinc-500">Aucun conteneur ne correspond aux filtres.</p> : null}
+          {containers.length === 0 ? (
+            <p className="py-10 text-center text-sm text-zinc-500">
+              Aucun conteneur ne correspond aux filtres.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>
