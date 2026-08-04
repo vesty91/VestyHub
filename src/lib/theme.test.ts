@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { DEFAULT_THEME, getThemeDefinition, isThemeId, THEMES, THEME_IDS } from "./theme";
 
 describe("theme catalog", () => {
