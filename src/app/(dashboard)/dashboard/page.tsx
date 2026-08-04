@@ -84,7 +84,9 @@ export default async function DashboardPage() {
     {
       label: "Conteneurs Docker",
       value: docker.available ? docker.counters.total : "—",
-      detail: docker.available ? `${docker.counters.running} en cours` : "Proxy indisponible",
+      detail: docker.available
+        ? `${docker.counters.running} en cours`
+        : "Proxy indisponible",
       icon: <Container className="size-4" />,
       tone: docker.available ? ("success" as const) : ("warning" as const),
     },
@@ -137,7 +139,10 @@ export default async function DashboardPage() {
 
       <section className="grid auto-rows-[minmax(150px,auto)] grid-cols-1 gap-4 xl:grid-cols-6">
         {widgets.length === 0 ? (
-          <Panel className="xl:col-span-6" contentClassName="grid min-h-52 place-items-center text-center">
+          <Panel
+            className="xl:col-span-6"
+            contentClassName="grid min-h-52 place-items-center text-center"
+          >
             <div>
               <LayoutGrid className="text-muted-foreground mx-auto mb-3 size-7" />
               <p className="font-medium">Aucun widget enregistré</p>
@@ -191,7 +196,11 @@ export default async function DashboardPage() {
           {docker.available && docker.engine ? (
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="bg-surface-elevated/65 rounded-xl p-4">
-                <StatusDot tone="success" label="Actifs" pulse={docker.counters.running > 0} />
+                <StatusDot
+                  tone="success"
+                  label="Actifs"
+                  pulse={docker.counters.running > 0}
+                />
                 <p className="text-success mt-3 text-2xl font-semibold">
                   {docker.counters.running}
                 </p>
@@ -202,7 +211,9 @@ export default async function DashboardPage() {
               </div>
               <div className="bg-surface-elevated/65 rounded-xl p-4">
                 <StatusDot tone="info" label="Images" />
-                <p className="text-info mt-3 text-2xl font-semibold">{docker.engine.images}</p>
+                <p className="text-info mt-3 text-2xl font-semibold">
+                  {docker.engine.images}
+                </p>
               </div>
             </div>
           ) : (
