@@ -20,7 +20,9 @@ describe("ThemeSelector", () => {
   it("renders the five themes as an accessible radio group", () => {
     render(<ThemeSelector />);
 
-    expect(screen.getByRole("radiogroup", { name: "Thème VestyHub" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("radiogroup", { name: "Thème VestyHub" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(5);
     expect(screen.getByRole("radio", { name: /Midnight/ })).toHaveAttribute(
       "aria-checked",
