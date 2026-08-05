@@ -1,0 +1,64 @@
+name: Phase 3D one-shot preparation
+
+on:
+  push:
+    branches:
+      - feat/phase3d-synology-nas-observability
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase3d-synology-nas-observability
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply deterministic fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          client = Path('src/connectors/synology/client.ts')
+          text = client.read_text(encoding='utf-8')
+          text = text.replace('baseUrl: env.SYNOLOGY_BASE_URL,', 'baseUrl: env.SYNOLOGY_BASE_URL ?? "",')
+          text = text.replace('account: env.SYNOLOGY_USERNAME,', 'account: env.SYNOLOGY_USERNAME ?? "",')
+          text = text.replace('passwd: env.SYNOLOGY_PASSWORD,', 'passwd: env.SYNOLOGY_PASSWORD ?? "",')
+          text = text.replace(
+              'systemPayload ? [systemPayload.data, ...storagePayloads.map((payload) => payload.data)] : [],',
+              '[...(systemPayload ? [systemPayload.data] : []), ...storagePayloads.map((payload) => payload.data)],',
+          )
+          client.write_text(text, encoding='utf-8')
+
+          compose = Path('docker-compose.yml')
+          text = compose.read_text(encoding='utf-8')
+          text = text.replace(
+              '  SYNOLOGY_PASSWORD: ${SYNOLOGY_PASSWORD:-}\n  SYNOLOGY_VERIFY_TLS:',
+              '  SYNOLOGY_PASSWORD: ${SYNOLOGY_PASSWORD:-}\n  SYNOLOGY_TIMEOUT_MS: ${SYNOLOGY_TIMEOUT_MS:-8000}\n  SYNOLOGY_VERIFY_TLS:',
+          )
+          compose.write_text(text, encoding='utf-8')
+          PY
+      - run: pnpm exec prettier --write .env.example docker-compose.yml docs/PHASE3D_SYNOLOGY_NAS_OBSERVABILITY.md 'src/app/(dashboard)/nas/page.tsx' src/app/api/nas src/connectors/synology src/lib/env/index.ts src/lib/nas
+      - name: Commit when needed
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Phase 3D files already prepared."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .env.example docker-compose.yml docs/PHASE3D_SYNOLOGY_NAS_OBSERVABILITY.md 'src/app/(dashboard)/nas/page.tsx' src/app/api/nas src/connectors/synology src/lib/env/index.ts src/lib/nas
+          git commit -m "style(nas): prepare phase 3d implementation"
+          git push origin HEAD:feat/phase3d-synology-nas-observability
