@@ -93,7 +93,7 @@ describe("Synology SNMP normalization", () => {
       freeBytes: 511705088,
       usedBytes: 14975489802240,
     });
-    expect(normalized.storagePools[0]?.usagePercent).toBeCloseTo(100, 3);
+    expect(normalized.storagePools[0]?.usagePercent).toBeCloseTo(99.9966, 4);
   });
 
   it("rejects a malformed Prometheus response", () => {
