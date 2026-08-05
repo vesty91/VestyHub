@@ -3,7 +3,11 @@ import { z } from "zod";
 import { getEnv } from "@/lib/env";
 import { assertServerOnly } from "@/lib/security/assert-server";
 
-import { buildSynologyLoginParams, buildSynologyLogoutParams } from "./auth";
+import {
+  buildSynologyLoginParams,
+  buildSynologyLogoutParams,
+  buildSynologySessionHeaders,
+} from "./auth";
 import { SynologyConnectorError, mapDsmErrorCode } from "./errors";
 import { synologyPostJson } from "./http";
 import {
@@ -81,7 +85,11 @@ export interface SynologyDsmSnapshot {
   warnings: SynologyWarning[];
 }
 
-function requestOptions(path: string, params: URLSearchParams) {
+function requestOptions(
+  path: string,
+  params: URLSearchParams,
+  headers?: Readonly<Record<string, string>>,
+) {
   const env = getEnv();
   return {
     baseUrl: env.SYNOLOGY_BASE_URL ?? "",
@@ -90,6 +98,7 @@ function requestOptions(path: string, params: URLSearchParams) {
     timeoutMs: env.SYNOLOGY_TIMEOUT_MS,
     verifyTls: env.SYNOLOGY_VERIFY_TLS,
     caCertPath: env.SYNOLOGY_CA_CERT_PATH || undefined,
+    headers,
   };
 }
 
@@ -130,9 +139,12 @@ async function postApi(
   });
   if (session) {
     body.set("_sid", session.sid);
-    if (session.synoToken) body.set("SynoToken", session.synoToken);
   }
-  return parseEnvelope(await synologyPostJson(requestOptions(capability.path, body)));
+
+  const headers = buildSynologySessionHeaders(session?.synoToken);
+  return parseEnvelope(
+    await synologyPostJson(requestOptions(capability.path, body, headers)),
+  );
 }
 
 export async function discoverSynologyCapabilities(): Promise<SynologyApiCapability[]> {
