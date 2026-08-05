@@ -7,14 +7,14 @@ Remplacer l’écran NAS de préparation par une vue réellement alimentée par 
 ## Périmètre
 
 - découverte des API disponibles via `SYNO.API.Info` ;
-- authentification serveur via `SYNO.API.Auth` avec session dédiée VestyHub ;
+- authentification serveur via `SYNO.API.Auth` avec un SID générique non lié à une application DSM ;
 - lecture de l’identité du NAS, de DSM, de l’uptime et de la température lorsqu’ils sont exposés ;
 - lecture des volumes, groupes de stockage et disques lorsque les API sont disponibles ;
 - lecture de l’utilisation CPU, mémoire, stockage et réseau lorsque DSM l’expose ;
 - vue `/nas` thématisée et responsive ;
 - API authentifiée `/api/nas/overview` ;
 - état partiel explicite lorsque certaines API DSM ne sont pas disponibles ;
-- cache serveur court, timeout, limite de taille et déconnexion de session en `finally` ;
+- cache serveur court, timeout, limite de taille et déconnexion du SID en `finally` ;
 - aucune donnée fictive.
 
 ## Contraintes de sécurité
@@ -24,6 +24,7 @@ Remplacer l’écran NAS de préparation par une vue réellement alimentée par 
 - aucune URL arbitraire reçue du navigateur ;
 - aucune valeur de mot de passe, SID ou SynoToken dans les réponses, journaux ou erreurs publiques ;
 - authentification envoyée en corps `application/x-www-form-urlencoded`, pas dans l’URL ;
+- aucun nom de session applicative DSM envoyé, afin de ne pas demander les privilèges d’un paquet ;
 - catalogue fermé d’API et de méthodes de lecture ;
 - aucune méthode de création, modification, arrêt, redémarrage, suppression ou mise à jour ;
 - déconnexion DSM tentée même en cas d’échec partiel ;
@@ -50,11 +51,12 @@ DSM fournit l’identité et le stockage ; Prometheus peut compléter les métri
 - connexion réelle au DS920+ ;
 - découverte des API sans fuite de secret ;
 - compte DSM dédié et limité ;
+- authentification générique sans erreur `402` liée à une session applicative ;
 - affichage du modèle, de DSM et de l’uptime ;
 - affichage des volumes et disques réellement retournés ;
 - comportement propre avec identifiants invalides ;
 - comportement propre avec une API DSM absente ;
 - comportement propre avec certificat non approuvé ;
-- aucune session DSM abandonnée volontairement ;
+- aucun SID DSM abandonné volontairement ;
 - CI complète verte ;
 - validation visuelle dans les cinq thèmes.
