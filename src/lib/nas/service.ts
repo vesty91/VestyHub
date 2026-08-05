@@ -4,6 +4,7 @@ import {
   normalizeSynologyError,
   publicSynologyErrorMessage,
 } from "@/connectors/synology/errors";
+import { collectSynologySnmpStorage } from "@/connectors/synology/snmp";
 import type {
   NasOverview,
   NasUtilization,
@@ -148,7 +149,69 @@ async function loadNasOverview(): Promise<NasOverview> {
   try {
     const snapshot = await collectSynologyDsmSnapshot();
     let utilization = snapshot.utilization;
-    if (!utilization && env.SYNOLOGY_MODE === "hybrid" && env.PROMETHEUS_URL) {
+    let volumes = snapshot.volumes;
+    let storagePools = snapshot.storagePools;
+    let disks = snapshot.disks;
+    let snapshotWarnings = snapshot.warnings;
+
+    if (env.SYNOLOGY_MODE === "hybrid" && env.PROMETHEUS_URL) {
+      if (!utilization) {
+        try {
+          utilization = await prometheusUtilization();
+          if (utilization) {
+            warnings.push({
+              code: "PARTIAL_DATA",
+              message: "Les métriques d’utilisation sont complétées par Prometheus.",
+            });
+          }
+        } catch {
+          warnings.push({
+            code: "PARTIAL_DATA",
+            message: "Prometheus n’a pas pu compléter les métriques DSM.",
+          });
+        }
+      }
+
+      try {
+        const snmpStorage = await collectSynologySnmpStorage();
+        const hasSnmpStorage =
+          snmpStorage.volumes.length > 0 ||
+          snmpStorage.storagePools.length > 0 ||
+          snmpStorage.disks.length > 0;
+
+        if (hasSnmpStorage) {
+          if (volumes.length === 0) volumes = snmpStorage.volumes;
+          if (storagePools.length === 0) storagePools = snmpStorage.storagePools;
+          if (disks.length === 0) disks = snmpStorage.disks;
+          snapshotWarnings = snapshotWarnings.filter(
+            (warning) =>
+              !(
+                warning.api?.includes("Storage") ||
+                (warning.code === "PARTIAL_DATA" &&
+                  warning.message.includes("aucune donnée de stockage"))
+              ),
+          );
+          warnings.push({
+            code: "PARTIAL_DATA",
+            api: "synology-snmp",
+            message:
+              "Les données de stockage refusées par DSM sont complétées par SNMPv3.",
+          });
+        } else {
+          warnings.push({
+            code: "PARTIAL_DATA",
+            api: "synology-snmp",
+            message: "Prometheus ne retourne aucune donnée de stockage Synology.",
+          });
+        }
+      } catch {
+        warnings.push({
+          code: "PARTIAL_DATA",
+          api: "synology-snmp",
+          message: "La collecte SNMPv3 Synology n’a pas pu compléter le stockage.",
+        });
+      }
+    } else if (!utilization && env.SYNOLOGY_MODE === "hybrid" && env.PROMETHEUS_URL) {
       try {
         utilization = await prometheusUtilization();
         if (utilization) {
@@ -179,11 +242,11 @@ async function loadNasOverview(): Promise<NasOverview> {
       },
       system: snapshot.system,
       utilization,
-      volumes: snapshot.volumes,
-      storagePools: snapshot.storagePools,
-      disks: snapshot.disks,
+      volumes,
+      storagePools,
+      disks,
       capabilities: snapshot.capabilities,
-      warnings: [...warnings, ...snapshot.warnings],
+      warnings: [...warnings, ...snapshotWarnings],
     };
   } catch (error) {
     const normalized = normalizeSynologyError(error);
