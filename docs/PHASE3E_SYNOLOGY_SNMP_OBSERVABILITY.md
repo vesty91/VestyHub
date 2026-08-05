@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Compléter les données DSM accessibles au compte de service `vestyhub` sans lui accorder de privilèges administrateur. Les informations système restent collectées via DSM WebAPI ; les disques, volumes et états RAID sont collectés via SNMPv3, puis exposés à Prometheus par `snmp_exporter`.
+Compléter les données DSM accessibles au compte de service `vestyhub` sans lui accorder de privilèges administrateur. Les informations système restent collectées via DSM WebAPI ; les disques, volumes et états RAID sont collectés via SNMPv3, exposés à Prometheus par `snmp_exporter`, puis normalisés côté serveur par VestyHub.
 
 ## Architecture
 
@@ -16,16 +16,18 @@ DSM WebAPI
 Synology SNMPv3 (UDP/161, authPriv)
 └── snmp_exporter
     └── Prometheus job synology-snmp
-        ├── système
-        ├── disques
-        ├── RAID / volumes
-        └── I/O stockage
+        └── VestyHub mode hybrid
+            ├── disques
+            ├── températures
+            ├── santé des disques
+            ├── volumes
+            └── groupes de stockage
 ```
 
 Le conteneur `snmp-exporter` appartient à deux réseaux :
 
 - `backend`, réseau interne utilisé par Prometheus ;
-- `monitoring-egress`, réseau dédié permettant uniquement au collecteur SNMP de joindre le NAS sur le LAN.
+- `monitoring-egress`, réseau dédié permettant au collecteur SNMP de joindre le NAS sur le LAN.
 
 Aucun port HTTP de `snmp-exporter` n’est publié sur l’hôte.
 
@@ -40,13 +42,14 @@ Aucun port HTTP de `snmp-exporter` n’est publié sur l’hôte.
 Dans **Panneau de configuration → Terminal et SNMP → SNMP** :
 
 1. activer le service SNMP ;
-2. activer SNMPv3 ;
-3. créer un identifiant SNMP dédié ;
-4. sélectionner le protocole d’authentification **SHA** ;
-5. activer la confidentialité SNMP ;
-6. sélectionner le protocole de confidentialité **AES** ;
-7. utiliser deux mots de passe longs et distincts ;
-8. appliquer la configuration.
+2. laisser SNMPv1 et SNMPv2c désactivés ;
+3. activer SNMPv3 ;
+4. créer l’identifiant dédié `vestyhub-snmp` ;
+5. sélectionner le protocole d’authentification **SHA** ;
+6. activer la confidentialité SNMP ;
+7. sélectionner le protocole de confidentialité **AES** ;
+8. utiliser deux mots de passe longs et distincts ;
+9. appliquer la configuration.
 
 Les mots de passe doivent respecter les contraintes DSM : 8 à 127 caractères, sans espace ni les caractères `"`, `'` ou `\`.
 
@@ -59,6 +62,14 @@ SNMPV3_PRIV_PASSWORD=
 ```
 
 Ces variables sont transmises uniquement au conteneur `snmp-exporter`. Elles ne sont pas transmises à l’application Next.js et ne doivent jamais être committées.
+
+Pour activer la fusion DSM + SNMP dans VestyHub :
+
+```dotenv
+SYNOLOGY_ENABLED=true
+SYNOLOGY_MODE=hybrid
+PROMETHEUS_URL=http://prometheus:9090
+```
 
 ## Cible
 
@@ -76,56 +87,61 @@ La cible est définie dans `deploy/prometheus/prometheus.yml`. Le scrape HTTP s�
 docker compose --profile monitoring up -d snmp-exporter prometheus
 ```
 
-Ne pas exécuter `docker compose config` après avoir chargé les secrets dans l’environnement si la sortie doit être copiée ou partagée : Compose développe les variables d’environnement dans sa sortie.
+Ne pas exécuter `docker compose config` sans `--quiet` après avoir chargé les secrets dans l’environnement si la sortie doit être copiée ou partagée : Compose développe les variables d’environnement dans sa sortie.
 
-## Validation
+## Validation réelle du DS920+
 
-### Conteneurs
-
-```powershell
-docker compose --profile monitoring ps snmp-exporter prometheus
-docker compose logs --tail=100 snmp-exporter
-docker compose logs --tail=100 prometheus
-```
-
-### Cibles Prometheus
-
-Depuis le conteneur Prometheus :
-
-```powershell
-docker exec vestyhub-prometheus-1 wget -qO- `
-  "http://127.0.0.1:9090/api/v1/targets?state=active"
-```
-
-La cible `synology-snmp` doit avoir `health: "up"`.
-
-### Métriques Synology
-
-```powershell
-docker exec vestyhub-prometheus-1 wget -qO- `
-  "http://127.0.0.1:9090/api/v1/query?query=up%7Bjob%3D%22synology-snmp%22%7D"
-```
-
-La valeur attendue est `1`.
-
-Les premières métriques à inspecter sont :
+Validation effectuée le 5 août 2026 sur le NAS `RestorPc` :
 
 ```text
-systemStatus
- temperature
- diskStatus
- diskTemperature
- diskHealthStatus
- raidStatus
- raidFreeSize
- raidTotalSize
- storageIOLA
- spaceIOLA
+job              instance       health
+snmp-exporter    snmp-exporter  up
+synology-snmp    192.168.1.5    up
 ```
+
+La requête Prometheus suivante retourne `1` :
+
+```promql
+up{job="synology-snmp"}
+```
+
+Les métriques réelles confirmées sont :
+
+```text
+diskStatus
+diskTemperature
+diskHealthStatus
+raidStatus
+raidFreeSize
+raidTotalSize
+```
+
+Résultat observé :
+
+- 4 disques détectés ;
+- état de déploiement `1` pour les 4 disques, soit `Normal` ;
+- santé `1` pour les 4 disques, soit `Normal` ;
+- températures observées : 38 °C, 42 °C, 40 °C et 40 °C ;
+- `Storage Pool 1` détecté et normal ;
+- `Volume 1` détecté et normal ;
+- capacité du volume : `14 376 458 133 504` octets ;
+- espace libre du volume : `7 363 491 246 080` octets.
+
+## Normalisation VestyHub
+
+`src/connectors/synology/snmp.ts` interroge Prometheus avec une requête instantanée et produit :
+
+- `NasDisk[]` depuis `diskStatus`, `diskHealthStatus` et `diskTemperature` ;
+- `NasVolume[]` pour les entrées RAID dont le nom commence par `Volume` ;
+- `NasStoragePool[]` pour les autres entrées RAID ;
+- `usedBytes` et `usagePercent` depuis `raidTotalSize` et `raidFreeSize` ;
+- décodage des identifiants hexadécimaux SNMP, par exemple `0x4469736B2031` vers `Disk 1`.
+
+En mode `hybrid`, les données DSM restent prioritaires. SNMPv3 complète uniquement les catégories absentes, ce qui conserve la compatibilité avec un futur compte DSM autorisé à lire les API de stockage.
 
 ## Sécurité
 
-- SNMPv1 et SNMPv2c ne sont pas nécessaires ;
+- SNMPv1 et SNMPv2c désactivés ;
 - SNMPv3 utilise `authPriv` avec SHA et AES ;
 - aucun secret SNMP dans Prometheus ou VestyHub ;
 - aucun port `9116` publié sur l’hôte ;
@@ -133,6 +149,25 @@ systemStatus
 - aucune permission supplémentaire accordée au compte WebAPI `vestyhub` ;
 - collecte en lecture seule uniquement.
 
-## Étape suivante
+## Validation applicative
 
-Après validation réelle des noms de métriques retournés par le DS920+, VestyHub pourra normaliser les séries `disk*` et `raid*` en objets `NasDisk`, `NasVolume` et `NasStoragePool` dans le mode `hybrid`.
+Après récupération du dernier commit :
+
+```powershell
+$env:SYNOLOGY_MODE="hybrid"
+$env:VESTYHUB_IMAGE_TAG="phase3e-local"
+
+docker compose --profile monitoring up -d `
+  --no-deps `
+  --build `
+  --force-recreate `
+  app
+```
+
+La page `http://localhost:3000/nas` doit afficher :
+
+- 4 disques ;
+- leurs températures ;
+- `Volume 1` avec sa capacité et son occupation ;
+- `Storage Pool 1` avec son état ;
+- la mention de complément SNMPv3 dans les avertissements de source.
