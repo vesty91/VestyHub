@@ -4,11 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeSynologySnmpStorage } from "./snmp";
 
-function sample(
-  name: string,
-  labels: Record<string, string>,
-  value: string,
-) {
+function sample(name: string, labels: Record<string, string>, value: string) {
   return {
     metric: {
       __name__: name,
