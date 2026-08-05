@@ -1,0 +1,27 @@
+name: Format preview
+
+on:
+  push:
+    branches:
+      - feat/phase3e-synology-snmp-observability
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Print Prettier diff
+        run: |
+          pnpm prettier --write src/connectors/synology/snmp.ts src/connectors/synology/snmp.test.ts
+          git diff -- src/connectors/synology/snmp.ts src/connectors/synology/snmp.test.ts
