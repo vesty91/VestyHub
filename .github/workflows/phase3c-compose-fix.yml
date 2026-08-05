@@ -1,0 +1,47 @@
+name: Phase 3C compose compatibility fix
+
+on:
+  push:
+    branches:
+      - feat/phase3c-monitoring-observability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase3c-monitoring-observability
+      - name: Apply validated monitoring fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docker-compose.yml')
+          content = path.read_text(encoding='utf-8')
+          content = content.replace(
+              'gcr.io/cadvisor/cadvisor:v0.60.5',
+              'ghcr.io/google/cadvisor:v0.60.5',
+          )
+          content = content.replace(
+              '/:/host:ro,rslave',
+              '/:/host:ro',
+          )
+          path.write_text(content, encoding='utf-8')
+          PY
+      - name: Commit when needed
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Compose already patched."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docker-compose.yml
+          git commit -m "fix(monitoring): support current cAdvisor registry and Docker Desktop"
+          git push origin HEAD:feat/phase3c-monitoring-observability
