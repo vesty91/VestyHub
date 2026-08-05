@@ -241,6 +241,31 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  snmp-exporter:
+    image: prom/snmp-exporter:v0.30.1
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/snmp_exporter/snmp.yml
+      - --config.file=/etc/snmp_exporter/auth.yml
+      - --config.expand-environment-variables
+    environment:
+      SNMPV3_USERNAME: ${SNMPV3_USERNAME:-}
+      SNMPV3_AUTH_PASSWORD: ${SNMPV3_AUTH_PASSWORD:-}
+      SNMPV3_PRIV_PASSWORD: ${SNMPV3_PRIV_PASSWORD:-}
+    volumes:
+      - ./deploy/snmp-exporter/auth.yml:/etc/snmp_exporter/auth.yml:ro
+    networks:
+      - backend
+      - monitoring-egress
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
   loki:
     image: grafana/loki:3.7.4
     restart: unless-stopped
@@ -291,6 +316,7 @@ networks:
   frontend: {}
   backend:
     internal: true
+  monitoring-egress: {}
 
 volumes:
   postgres_data:
