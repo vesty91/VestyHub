@@ -60,21 +60,24 @@ function collectRecords(root: unknown, maxDepth = 5, maxNodes = 5_000): UnknownR
   return records;
 }
 
-function findValue(root: unknown, keys: readonly string[]): unknown {
+function findString(root: unknown, keys: readonly string[]): string | undefined {
   for (const record of collectRecords(root)) {
     for (const key of keys) {
-      if (record[key] !== undefined && record[key] !== null) return record[key];
+      const value = toNonEmptyString(record[key]);
+      if (value !== undefined) return value;
     }
   }
   return undefined;
 }
 
-function findString(root: unknown, keys: readonly string[]): string | undefined {
-  return toNonEmptyString(findValue(root, keys));
-}
-
 function findNumber(root: unknown, keys: readonly string[]): number | undefined {
-  return toFiniteNumber(findValue(root, keys));
+  for (const record of collectRecords(root)) {
+    for (const key of keys) {
+      const value = toFiniteNumber(record[key]);
+      if (value !== undefined) return value;
+    }
+  }
+  return undefined;
 }
 
 function findArrays(root: unknown, keys: readonly string[]): unknown[][] {
@@ -85,8 +88,11 @@ function findArrays(root: unknown, keys: readonly string[]): unknown[][] {
       if (Array.isArray(value)) arrays.push(value);
     }
   }
-  if (Array.isArray(root)) arrays.push(root);
   return arrays;
+}
+
+function directArrays(payloads: unknown[]): unknown[][] {
+  return payloads.filter(Array.isArray) as unknown[][];
 }
 
 function clampPercent(value: number | undefined): number | undefined {
@@ -247,6 +253,33 @@ function normalizeDisk(item: unknown, index: number): NasDisk | null {
   };
 }
 
+function looksLikeVolume(item: unknown): boolean {
+  return (
+    isRecord(item) &&
+    ["volume_id", "volumeId", "fs_type", "filesystem", "volume_name"].some(
+      (key) => item[key] !== undefined,
+    )
+  );
+}
+
+function looksLikePool(item: unknown): boolean {
+  return (
+    isRecord(item) &&
+    ["pool_id", "storage_pool_id", "raid_type", "pool_name"].some(
+      (key) => item[key] !== undefined,
+    )
+  );
+}
+
+function looksLikeDisk(item: unknown): boolean {
+  return (
+    isRecord(item) &&
+    ["disk_id", "diskId", "smart_status", "serial_number", "dev_name"].some(
+      (key) => item[key] !== undefined,
+    )
+  );
+}
+
 function deduplicateById<T extends { id: string }>(items: T[]): T[] {
   const result = new Map<string, T>();
   for (const item of items) {
@@ -260,29 +293,35 @@ export function normalizeSynologyStorage(payloads: unknown[]): {
   storagePools: NasStoragePool[];
   disks: NasDisk[];
 } {
-  const volumes = findArrays(payloads, [
-    "volumes",
-    "volume_info",
-    "volume_infos",
-    "volumeList",
-  ]).flatMap((items) => items.map(normalizeVolume).filter((item): item is NasVolume => !!item));
+  const direct = directArrays(payloads);
+  const volumeArrays = [
+    ...findArrays(payloads, ["volumes", "volume_info", "volume_infos", "volumeList"]),
+    ...direct.filter((items) => items.some(looksLikeVolume)),
+  ];
+  const poolArrays = [
+    ...findArrays(payloads, [
+      "storagePools",
+      "storage_pools",
+      "pools",
+      "pool_info",
+      "pool_infos",
+    ]),
+    ...direct.filter((items) => items.some(looksLikePool)),
+  ];
+  const diskArrays = [
+    ...findArrays(payloads, ["disks", "disk_info", "disk_infos", "diskList"]),
+    ...direct.filter((items) => items.some(looksLikeDisk)),
+  ];
 
-  const storagePools = findArrays(payloads, [
-    "storagePools",
-    "storage_pools",
-    "pools",
-    "pool_info",
-    "pool_infos",
-  ]).flatMap((items) =>
+  const volumes = volumeArrays.flatMap((items) =>
+    items.map(normalizeVolume).filter((item): item is NasVolume => !!item),
+  );
+  const storagePools = poolArrays.flatMap((items) =>
     items.map(normalizePool).filter((item): item is NasStoragePool => !!item),
   );
-
-  const disks = findArrays(payloads, [
-    "disks",
-    "disk_info",
-    "disk_infos",
-    "diskList",
-  ]).flatMap((items) => items.map(normalizeDisk).filter((item): item is NasDisk => !!item));
+  const disks = diskArrays.flatMap((items) =>
+    items.map(normalizeDisk).filter((item): item is NasDisk => !!item),
+  );
 
   return {
     volumes: deduplicateById(volumes),
