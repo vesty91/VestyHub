@@ -15,6 +15,7 @@ export interface SynologyHttpOptions {
   verifyTls: boolean;
   caCertPath?: string;
   maxResponseBytes?: number;
+  headers?: Readonly<Record<string, string>>;
 }
 
 function validateBaseUrl(baseUrl: string): URL {
@@ -93,6 +94,7 @@ export async function synologyPostJson({
   verifyTls,
   caCertPath,
   maxResponseBytes = DEFAULT_MAX_RESPONSE_BYTES,
+  headers,
 }: SynologyHttpOptions): Promise<unknown> {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 250 || timeoutMs > 120_000) {
     throw new RangeError("timeoutMs must be between 250 and 120000.");
@@ -116,6 +118,7 @@ export async function synologyPostJson({
         {
           method: "POST",
           headers: {
+            ...headers,
             Accept: "application/json",
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
             "Content-Length": Buffer.byteLength(body),
