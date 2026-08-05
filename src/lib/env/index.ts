@@ -67,6 +67,7 @@ const envSchema = z
     SYNOLOGY_BASE_URL: optionalUrl,
     SYNOLOGY_USERNAME: z.string().optional().or(z.literal("")),
     SYNOLOGY_PASSWORD: z.string().optional().or(z.literal("")),
+    SYNOLOGY_TIMEOUT_MS: boundedTimeout(8000),
     SYNOLOGY_VERIFY_TLS: strictBoolean(true),
     SYNOLOGY_CA_CERT_PATH: z.string().optional().or(z.literal("")),
 
