@@ -2,7 +2,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildSynologyLoginParams, buildSynologyLogoutParams } from "./auth";
+import {
+  buildSynologyLoginParams,
+  buildSynologyLogoutParams,
+  buildSynologySessionHeaders,
+} from "./auth";
 
 describe("Synology DSM authentication parameters", () => {
   it("does not bind login to a DSM application session", () => {
@@ -23,6 +27,13 @@ describe("Synology DSM authentication parameters", () => {
       passwd: "secret",
       format: "sid",
     });
+  });
+
+  it("sends the SynoToken only through the DSM request header", () => {
+    expect(buildSynologySessionHeaders("token-value")).toEqual({
+      "X-SYNO-TOKEN": "token-value",
+    });
+    expect(buildSynologySessionHeaders()).toEqual({});
   });
 
   it("logs out the generic SID session without an application name", () => {
