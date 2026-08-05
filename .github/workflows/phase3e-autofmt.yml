@@ -1,0 +1,43 @@
+name: Phase 3E Autofmt
+
+on:
+  push:
+    branches: [feat/phase3e-synology-snmp-observability]
+    paths:
+      - .phase3e-format-trigger
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase3e-synology-snmp-observability
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write src/connectors/synology/snmp.ts src/connectors/synology/snmp.test.ts
+
+      - name: Commit formatting
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/connectors/synology/snmp.ts src/connectors/synology/snmp.test.ts
+          git commit -m "style(snmp): format Synology metrics normalizer"
+          git push origin HEAD:feat/phase3e-synology-snmp-observability
