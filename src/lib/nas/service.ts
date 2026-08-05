@@ -211,21 +211,6 @@ async function loadNasOverview(): Promise<NasOverview> {
           message: "La collecte SNMPv3 Synology n’a pas pu compléter le stockage.",
         });
       }
-    } else if (!utilization && env.SYNOLOGY_MODE === "hybrid" && env.PROMETHEUS_URL) {
-      try {
-        utilization = await prometheusUtilization();
-        if (utilization) {
-          warnings.push({
-            code: "PARTIAL_DATA",
-            message: "Les métriques d’utilisation sont complétées par Prometheus.",
-          });
-        }
-      } catch {
-        warnings.push({
-          code: "PARTIAL_DATA",
-          message: "Prometheus n’a pas pu compléter les métriques DSM.",
-        });
-      }
     }
 
     return {
