@@ -170,8 +170,7 @@ function normalizeDiskSamples(samples: MetricSample[]): NasDisk[] {
       disk.temperatureCelsius = value;
     }
 
-    disk.name =
-      decodeHexLabel(metricString(sample, "diskName") ?? "") ?? disk.name;
+    disk.name = decodeHexLabel(metricString(sample, "diskName") ?? "") ?? disk.name;
     disk.model = metricString(sample, "diskModel") ?? disk.model;
     disk.type = metricString(sample, "diskType") ?? disk.type;
     disks.set(key, disk);
