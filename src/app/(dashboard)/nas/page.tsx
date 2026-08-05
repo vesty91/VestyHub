@@ -21,11 +21,7 @@ import {
   StatCard,
   StatusDot,
 } from "@/components/vestyhub/primitives";
-import type {
-  NasDisk,
-  NasStoragePool,
-  NasVolume,
-} from "@/connectors/synology/types";
+import type { NasDisk, NasStoragePool, NasVolume } from "@/connectors/synology/types";
 import { publicSynologyErrorMessage } from "@/connectors/synology/errors";
 import { requireUser } from "@/lib/auth/dal";
 import { getNasOverview } from "@/lib/nas/service";
@@ -67,7 +63,9 @@ function aggregateVolumes(volumes: NasVolume[]) {
     totalBytes: totalBytes || undefined,
     usedBytes: usedBytes || undefined,
     usagePercent:
-      totalBytes > 0 ? Math.min(100, Math.max(0, (usedBytes / totalBytes) * 100)) : undefined,
+      totalBytes > 0
+        ? Math.min(100, Math.max(0, (usedBytes / totalBytes) * 100))
+        : undefined,
   };
 }
 
@@ -164,7 +162,9 @@ function DiskRow({ disk }: { disk: NasDisk }) {
       </div>
       <div>
         <p className="text-sm">{disk.model ?? "Modèle non fourni"}</p>
-        <p className="text-muted-foreground text-xs">{disk.serial ?? "Série non fournie"}</p>
+        <p className="text-muted-foreground text-xs">
+          {disk.serial ?? "Série non fournie"}
+        </p>
       </div>
       <div>
         <p className="text-muted-foreground text-xs">Capacité</p>
@@ -207,7 +207,13 @@ export default async function NasPage() {
         actions={
           <StatusDot
             label={statusLabel}
-            tone={overview.status.available ? "success" : overview.status.enabled ? "danger" : "warning"}
+            tone={
+              overview.status.available
+                ? "success"
+                : overview.status.enabled
+                  ? "danger"
+                  : "warning"
+            }
             pulse={overview.status.available}
           />
         }
@@ -228,7 +234,9 @@ export default async function NasPage() {
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Latence</dt>
               <dd className="font-medium">
-                {overview.status.latencyMs === undefined ? "—" : `${overview.status.latencyMs} ms`}
+                {overview.status.latencyMs === undefined
+                  ? "—"
+                  : `${overview.status.latencyMs} ms`}
               </dd>
             </div>
           </dl>
@@ -258,7 +266,10 @@ export default async function NasPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé NAS">
+      <section
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Résumé NAS"
+      >
         <StatCard
           label="CPU"
           value={formatPercent(overview.utilization?.cpuPercent)}
@@ -280,7 +291,11 @@ export default async function NasPage() {
           value={formatPercent(storage.usagePercent)}
           detail={`${formatBytes(storage.usedBytes)} sur ${formatBytes(storage.totalBytes)}`}
           icon={<HardDrive className="size-4" />}
-          tone={storage.usagePercent !== undefined && storage.usagePercent >= 90 ? "warning" : "success"}
+          tone={
+            storage.usagePercent !== undefined && storage.usagePercent >= 90
+              ? "warning"
+              : "success"
+          }
           progress={storage.usagePercent}
         />
         <StatCard
@@ -436,8 +451,8 @@ export default async function NasPage() {
                 key={`${warning.code}:${warning.api ?? "global"}:${index}`}
                 className="bg-warning/8 text-muted-foreground rounded-xl px-3 py-2 text-sm"
               >
-                <strong className="text-foreground">{warning.api ?? warning.code}</strong> —{" "}
-                {warning.message}
+                <strong className="text-foreground">{warning.api ?? warning.code}</strong>{" "}
+                — {warning.message}
               </li>
             ))}
           </ul>

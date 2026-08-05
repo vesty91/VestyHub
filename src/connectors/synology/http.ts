@@ -45,7 +45,10 @@ function validateBaseUrl(baseUrl: string): URL {
 }
 
 function validateApiPath(path: string): string {
-  const normalized = path.trim().replace(/^\/+/, "").replace(/^webapi\//, "");
+  const normalized = path
+    .trim()
+    .replace(/^\/+/, "")
+    .replace(/^webapi\//, "");
   if (
     !normalized ||
     normalized.includes("..") ||
@@ -100,7 +103,10 @@ export async function synologyPostJson({
 
   const url = buildSynologyApiUrl(baseUrl, path);
   const body = params.toString();
-  const ca = url.protocol === "https:" && caCertPath ? await loadCaCertificate(caCertPath) : undefined;
+  const ca =
+    url.protocol === "https:" && caCertPath
+      ? await loadCaCertificate(caCertPath)
+      : undefined;
   const transport = url.protocol === "https:" ? https : http;
 
   try {

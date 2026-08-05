@@ -152,11 +152,7 @@ export function normalizeSynologySystem(payloads: unknown[]): NasSystemInfo | nu
     ]),
     architecture: findString(root, ["arch", "architecture", "cpu_arch"]),
     uptimeSeconds: findNumber(root, ["uptime", "up_time", "uptime_seconds"]),
-    temperatureCelsius: findNumber(root, [
-      "temperature",
-      "system_temp",
-      "temp",
-    ]),
+    temperatureCelsius: findNumber(root, ["temperature", "system_temp", "temp"]),
     memoryBytes: findNumber(root, ["ram_size", "memory_size", "memory_total"]),
   };
 
@@ -221,8 +217,7 @@ function normalizeVolume(item: unknown, index: number): NasVolume | null {
 function normalizePool(item: unknown, index: number): NasStoragePool | null {
   if (!isRecord(item)) return null;
   const id =
-    findString(item, ["pool_id", "storage_pool_id", "id", "uuid"]) ??
-    `pool-${index + 1}`;
+    findString(item, ["pool_id", "storage_pool_id", "id", "uuid"]) ?? `pool-${index + 1}`;
   const name =
     findString(item, ["display_name", "pool_name", "storage_pool_name", "name"]) ?? id;
   return {

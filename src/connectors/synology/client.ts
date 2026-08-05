@@ -83,7 +83,7 @@ export interface SynologyDsmSnapshot {
 function requestOptions(path: string, params: URLSearchParams) {
   const env = getEnv();
   return {
-    baseUrl: env.SYNOLOGY_BASE_URL,
+    baseUrl: env.SYNOLOGY_BASE_URL ?? "",
     path,
     params,
     timeoutMs: env.SYNOLOGY_TIMEOUT_MS,
@@ -165,7 +165,9 @@ export async function discoverSynologyCapabilities(): Promise<SynologyApiCapabil
 
 async function login(capabilities: SynologyApiCapability[]): Promise<SynologySession> {
   const env = getEnv();
-  const discovered = capabilities.find((capability) => capability.api === "SYNO.API.Auth");
+  const discovered = capabilities.find(
+    (capability) => capability.api === "SYNO.API.Auth",
+  );
   const auth: SynologyApiCapability = discovered
     ? {
         ...discovered,
@@ -174,8 +176,8 @@ async function login(capabilities: SynologyApiCapability[]): Promise<SynologySes
     : { api: "SYNO.API.Auth", path: "entry.cgi", minVersion: 3, maxVersion: 6 };
 
   const params: Record<string, string> = {
-    account: env.SYNOLOGY_USERNAME,
-    passwd: env.SYNOLOGY_PASSWORD,
+    account: env.SYNOLOGY_USERNAME ?? "",
+    passwd: env.SYNOLOGY_PASSWORD ?? "",
     session: "VestyHub",
     format: "sid",
   };
@@ -196,12 +198,7 @@ async function login(capabilities: SynologyApiCapability[]): Promise<SynologySes
 
 async function logout(session: SynologySession): Promise<void> {
   try {
-    await postApi(
-      session.auth,
-      "logout",
-      { session: "VestyHub" },
-      session,
-    );
+    await postApi(session.auth, "logout", { session: "VestyHub" }, session);
   } catch {
     // Best effort: collection results must not be discarded when logout fails.
   }
@@ -311,10 +308,13 @@ export async function collectSynologyDsmSnapshot(): Promise<SynologyDsmSnapshot>
       warnings,
     );
 
-    const storage = normalizeSynologyStorage(storagePayloads.map((payload) => payload.data));
-    const system = normalizeSynologySystem(
-      systemPayload ? [systemPayload.data, ...storagePayloads.map((payload) => payload.data)] : [],
+    const storage = normalizeSynologyStorage(
+      storagePayloads.map((payload) => payload.data),
     );
+    const system = normalizeSynologySystem([
+      ...(systemPayload ? [systemPayload.data] : []),
+      ...storagePayloads.map((payload) => payload.data),
+    ]);
     const utilization = normalizeSynologyUtilization(
       utilizationPayloads.map((payload) => payload.data),
     );
