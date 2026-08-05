@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getEnv } from "@/lib/env";
 import { assertServerOnly } from "@/lib/security/assert-server";
 
+import { buildSynologyLoginParams, buildSynologyLogoutParams } from "./auth";
 import { SynologyConnectorError, mapDsmErrorCode } from "./errors";
 import { synologyPostJson } from "./http";
 import {
@@ -175,13 +176,11 @@ async function login(capabilities: SynologyApiCapability[]): Promise<SynologySes
       }
     : { api: "SYNO.API.Auth", path: "entry.cgi", minVersion: 3, maxVersion: 6 };
 
-  const params: Record<string, string> = {
-    account: env.SYNOLOGY_USERNAME ?? "",
-    passwd: env.SYNOLOGY_PASSWORD ?? "",
-    session: "VestyHub",
-    format: "sid",
-  };
-  if (auth.maxVersion >= 6) params.enable_syno_token = "yes";
+  const params = buildSynologyLoginParams(
+    env.SYNOLOGY_USERNAME ?? "",
+    env.SYNOLOGY_PASSWORD ?? "",
+    auth.maxVersion,
+  );
 
   const data = loginDataSchema.safeParse(await postApi(auth, "login", params));
   if (!data.success) {
@@ -198,7 +197,7 @@ async function login(capabilities: SynologyApiCapability[]): Promise<SynologySes
 
 async function logout(session: SynologySession): Promise<void> {
   try {
-    await postApi(session.auth, "logout", { session: "VestyHub" }, session);
+    await postApi(session.auth, "logout", buildSynologyLogoutParams(), session);
   } catch {
     // Best effort: collection results must not be discarded when logout fails.
   }
