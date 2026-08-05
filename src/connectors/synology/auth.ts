@@ -16,6 +16,12 @@ export function buildSynologyLoginParams(
   return params;
 }
 
+export function buildSynologySessionHeaders(
+  synoToken?: string,
+): Record<string, string> {
+  return synoToken ? { "X-SYNO-TOKEN": synoToken } : {};
+}
+
 export function buildSynologyLogoutParams(): Record<string, string> {
   return {};
 }
