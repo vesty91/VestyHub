@@ -6,6 +6,8 @@ import type {
   NasVolume,
 } from "./types";
 
+const MEBIBYTE_IN_BYTES = 1024 * 1024;
+
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -153,7 +155,14 @@ export function normalizeSynologySystem(payloads: unknown[]): NasSystemInfo | nu
     architecture: findString(root, ["arch", "architecture", "cpu_arch"]),
     uptimeSeconds: findNumber(root, ["uptime", "up_time", "uptime_seconds"]),
     temperatureCelsius: findNumber(root, ["temperature", "system_temp", "temp"]),
-    memoryBytes: findNumber(root, ["ram_size", "memory_size", "memory_total"]),
+    memoryBytes: (() => {
+      const ramSize = findNumber(root, ["ram_size"]);
+      if (ramSize === undefined) {
+        return findNumber(root, ["memory_size", "memory_total"]);
+      }
+
+      return ramSize < MEBIBYTE_IN_BYTES ? ramSize * MEBIBYTE_IN_BYTES : ramSize;
+    })(),
   };
 
   return Object.values(system).some((value) => value !== undefined) ? system : null;

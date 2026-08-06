@@ -35,6 +35,27 @@ describe("Synology payload normalization", () => {
     });
   });
 
+  it("converts DSM ram_size expressed in MiB to bytes", () => {
+    expect(
+      normalizeSynologySystem([
+        {
+          data: {
+            ram_size: 8192,
+          },
+        },
+      ]),
+    ).toEqual({
+      hostname: undefined,
+      model: undefined,
+      serial: undefined,
+      dsmVersion: undefined,
+      architecture: undefined,
+      uptimeSeconds: undefined,
+      temperatureCelsius: undefined,
+      memoryBytes: 8192 * 1024 * 1024,
+    });
+  });
+
   it("extracts CPU, memory and network utilization", () => {
     expect(
       normalizeSynologyUtilization([
