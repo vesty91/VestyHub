@@ -68,6 +68,13 @@ export type FavoriteGridLayoutInput = {
   h?: number;
 };
 
+export type FavoriteTileRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 function toBoundedInteger(
   value: number | undefined,
   min: number,
@@ -78,6 +85,43 @@ function toBoundedInteger(
   }
 
   return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function rectanglesOverlap(left: FavoriteTileRect, right: FavoriteTileRect): boolean {
+  return !(
+    left.x + left.width <= right.x ||
+    right.x + right.width <= left.x ||
+    left.y + left.height <= right.y ||
+    right.y + right.height <= left.y
+  );
+}
+
+export function findFirstAvailableFavoriteTilePosition(
+  items: readonly FavoriteTileRect[],
+  width = FAVORITES_DEFAULT_ITEM_WIDTH,
+  height = FAVORITES_DEFAULT_ITEM_HEIGHT,
+): { x: number; y: number } | null {
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < FAVORITES_MIN_ITEM_WIDTH ||
+    width > FAVORITES_COLUMN_COUNT ||
+    height < FAVORITES_MIN_ITEM_HEIGHT ||
+    height > FAVORITES_MAX_ITEM_HEIGHT
+  ) {
+    return null;
+  }
+
+  for (let y = 0; y <= FAVORITES_MAX_ROWS; y += 1) {
+    for (let x = 0; x <= FAVORITES_COLUMN_COUNT - width; x += 1) {
+      const candidate = { x, y, width, height };
+      if (!items.some((item) => rectanglesOverlap(candidate, item))) {
+        return { x, y };
+      }
+    }
+  }
+
+  return null;
 }
 
 export function normalizeFavoriteGridLayout(
