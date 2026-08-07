@@ -154,16 +154,25 @@ export default async function DashboardPage() {
         ) : (
           <GridStackDashboard
             dashboardId={dashboard.id}
-            widgets={widgets.map((widget) => ({
-              id: widget.id,
-              title: widget.title,
-              positionX: widget.positionX,
-              positionY: widget.positionY,
-              width: widget.width,
-              height: widget.height,
-              minWidth: widget.minWidth,
-              minHeight: widget.minHeight,
-            }))}
+            widgets={widgets.map((widget) => {
+              const contentMinHeight = ["favorites", "system-status"].includes(
+                widget.widgetType,
+              )
+                ? 2
+                : 1;
+              const minHeight = Math.max(widget.minHeight, contentMinHeight);
+
+              return {
+                id: widget.id,
+                title: widget.title,
+                positionX: widget.positionX,
+                positionY: widget.positionY,
+                width: widget.width,
+                height: Math.max(widget.height, minHeight),
+                minWidth: widget.minWidth,
+                minHeight,
+              };
+            })}
           >
             {widgets.map((widget) => (
               <div key={widget.id} className="h-full">
