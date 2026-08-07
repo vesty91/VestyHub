@@ -100,7 +100,7 @@ export function FavoriteForm({
             id="groupId"
             name="groupId"
             defaultValue={favorite?.groupId ?? ""}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-ring/30"
+            className="border-border bg-background text-foreground focus:border-primary/50 focus:ring-ring/30 h-10 w-full rounded-xl border px-3 text-sm transition outline-none focus:ring-2"
           >
             <option value="" className="bg-popover text-popover-foreground">
               Sans groupe
@@ -138,7 +138,7 @@ export function FavoriteForm({
             id="openMode"
             name="openMode"
             defaultValue={favorite?.openMode ?? "new_tab"}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-ring/30"
+            className="border-border bg-background text-foreground focus:border-primary/50 focus:ring-ring/30 h-10 w-full rounded-xl border px-3 text-sm transition outline-none focus:ring-2"
           >
             <option value="new_tab" className="bg-popover text-popover-foreground">
               Nouvel onglet
