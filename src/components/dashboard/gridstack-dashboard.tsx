@@ -148,7 +148,7 @@ export function GridStackDashboard({
         cellHeight: 150,
         margin: 8,
         animate: true,
-        float: false,
+        float: true,
         handle: ".grid-stack-handle",
         resizable: { handles: "se" },
         columnOpts: {
