@@ -1,6 +1,13 @@
-import Link from "next/link";
-import { Activity, Container, LayoutGrid, Plus, ShieldCheck, Star } from "lucide-react";
 import { and, count, desc, eq } from "drizzle-orm";
+import {
+  Activity,
+  Container,
+  LayoutGrid,
+  Plus,
+  ShieldCheck,
+  Star,
+} from "lucide-react";
+import Link from "next/link";
 
 import { ClockWidget } from "@/components/dashboard/clock-widget";
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
@@ -172,7 +179,9 @@ export default async function DashboardPage() {
                 {widget.widgetType === "system-status" ? (
                   <StatusWidget docker={docker} databaseReady />
                 ) : null}
-                {!["clock", "favorites", "system-status"].includes(widget.widgetType) ? (
+                {!["clock", "favorites", "system-status"].includes(
+                  widget.widgetType,
+                ) ? (
                   <Panel className="h-full">
                     <p className="text-sm font-medium">{widget.title}</p>
                     <p className="text-muted-foreground mt-2 text-xs">
