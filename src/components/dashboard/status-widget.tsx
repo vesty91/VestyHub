@@ -32,7 +32,7 @@ export function StatusWidget({
 
   return (
     <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between pr-10">
         <div>
           <p className="text-sm font-medium">Statut général</p>
           <p className="text-xs text-zinc-500">Services essentiels</p>
