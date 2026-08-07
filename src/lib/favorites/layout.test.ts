@@ -7,6 +7,7 @@ import {
   FAVORITES_MIN_ITEM_WIDTH,
   favoriteLayoutFingerprint,
   favoritesLayoutPayloadSchema,
+  findFirstAvailableFavoriteTilePosition,
   normalizeFavoriteGridLayout,
 } from "./layout";
 
@@ -58,6 +59,37 @@ describe("favorites layout validation", () => {
     }));
 
     expect(favoritesLayoutPayloadSchema.safeParse({ items }).success).toBe(false);
+  });
+});
+
+describe("favorites automatic placement", () => {
+  it("starts an empty favorites grid at the top-left", () => {
+    expect(findFirstAvailableFavoriteTilePosition([])).toEqual({ x: 0, y: 0 });
+  });
+
+  it("fills the first horizontal gap that can contain the default tile", () => {
+    expect(
+      findFirstAvailableFavoriteTilePosition([
+        { x: 0, y: 0, width: 3, height: 3 },
+        { x: 6, y: 0, width: 3, height: 3 },
+        { x: 9, y: 0, width: 3, height: 3 },
+      ]),
+    ).toEqual({ x: 3, y: 0 });
+  });
+
+  it("moves to the first free row when the first row is occupied", () => {
+    expect(
+      findFirstAvailableFavoriteTilePosition([
+        { x: 0, y: 0, width: 3, height: 3 },
+        { x: 3, y: 0, width: 3, height: 3 },
+        { x: 6, y: 0, width: 3, height: 3 },
+        { x: 9, y: 0, width: 3, height: 3 },
+      ]),
+    ).toEqual({ x: 0, y: 3 });
+  });
+
+  it("rejects impossible requested dimensions", () => {
+    expect(findFirstAvailableFavoriteTilePosition([], 1, 1)).toBeNull();
   });
 });
 
