@@ -8,7 +8,11 @@ export const DASHBOARD_MAX_WIDGET_HEIGHT = 12;
 export const dashboardLayoutWidgetSchema = z
   .object({
     id: z.string().uuid(),
-    x: z.number().int().min(0).max(DASHBOARD_COLUMN_COUNT - 1),
+    x: z
+      .number()
+      .int()
+      .min(0)
+      .max(DASHBOARD_COLUMN_COUNT - 1),
     y: z.number().int().min(0).max(DASHBOARD_MAX_ROWS),
     width: z.number().int().min(1).max(DASHBOARD_COLUMN_COUNT),
     height: z.number().int().min(1).max(DASHBOARD_MAX_WIDGET_HEIGHT),

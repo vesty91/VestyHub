@@ -45,10 +45,7 @@ export async function PATCH(request: Request) {
         .select({ id: dashboards.id })
         .from(dashboards)
         .where(
-          and(
-            eq(dashboards.id, dashboardId),
-            eq(dashboards.userId, session.user.id),
-          ),
+          and(eq(dashboards.id, dashboardId), eq(dashboards.userId, session.user.id)),
         )
         .limit(1);
 
@@ -79,9 +76,7 @@ export async function PATCH(request: Request) {
         throw new LayoutAccessError();
       }
 
-      const constraints = new Map(
-        storedWidgets.map((widget) => [widget.id, widget]),
-      );
+      const constraints = new Map(storedWidgets.map((widget) => [widget.id, widget]));
       for (const widget of widgets) {
         const stored = constraints.get(widget.id);
         if (
@@ -127,8 +122,7 @@ export async function PATCH(request: Request) {
     if (error instanceof LayoutValidationError) {
       return NextResponse.json(
         {
-          error:
-            "La disposition ne respecte pas les dimensions minimales des widgets.",
+          error: "La disposition ne respecte pas les dimensions minimales des widgets.",
         },
         { status: 400, headers: NO_STORE_HEADERS },
       );

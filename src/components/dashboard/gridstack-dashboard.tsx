@@ -2,14 +2,7 @@
 
 import { GridStack, type GridStackWidget } from "gridstack";
 import { GripVertical } from "lucide-react";
-import {
-  Children,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Children, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   DASHBOARD_COLUMN_COUNT,
@@ -71,9 +64,7 @@ export function GridStackDashboard({
       return;
     }
 
-    const persistLayout = async (
-      layout: DashboardLayoutWidget[],
-    ): Promise<void> => {
+    const persistLayout = async (layout: DashboardLayoutWidget[]): Promise<void> => {
       const fingerprint = layoutFingerprint(layout);
       if (fingerprint === lastSavedFingerprintRef.current) {
         return;
@@ -107,20 +98,14 @@ export function GridStackDashboard({
         savingRef.current = false;
         const queued = queuedLayoutRef.current;
         queuedLayoutRef.current = null;
-        if (
-          queued &&
-          layoutFingerprint(queued) !== lastSavedFingerprintRef.current
-        ) {
+        if (queued && layoutFingerprint(queued) !== lastSavedFingerprintRef.current) {
           void persistLayout(queued);
         }
       }
     };
 
     const scheduleSave = (grid: GridStack) => {
-      if (
-        grid.isIgnoreChangeCB() ||
-        grid.getColumn() !== DASHBOARD_COLUMN_COUNT
-      ) {
+      if (grid.isIgnoreChangeCB() || grid.getColumn() !== DASHBOARD_COLUMN_COUNT) {
         return;
       }
 
@@ -217,7 +202,7 @@ export function GridStackDashboard({
             <div className="grid-stack-item-content relative overflow-visible">
               <button
                 type="button"
-                className="grid-stack-handle border-border/70 bg-surface-elevated/90 text-muted-foreground hover:text-foreground focus-visible:ring-primary absolute top-2 right-2 z-20 flex size-8 cursor-grab items-center justify-center rounded-lg border shadow-sm transition active:cursor-grabbing focus-visible:ring-2 focus-visible:outline-none"
+                className="grid-stack-handle border-border/70 bg-surface-elevated/90 text-muted-foreground hover:text-foreground focus-visible:ring-primary absolute top-2 right-2 z-20 flex size-8 cursor-grab items-center justify-center rounded-lg border shadow-sm transition focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
                 aria-label={`Déplacer le widget ${widget.title}`}
                 title={`Déplacer ${widget.title}`}
               >
