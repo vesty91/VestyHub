@@ -40,6 +40,7 @@ export function GridStackDashboard({
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<GridStack | null>(null);
   const debounceRef = useRef<number | null>(null);
+  const finalSaveFrameRef = useRef<number | null>(null);
   const savingRef = useRef(false);
   const queuedLayoutRef = useRef<DashboardLayoutWidget[] | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -104,14 +105,14 @@ export function GridStackDashboard({
       }
     };
 
-    const scheduleSave = (grid: GridStack) => {
-      if (grid.isIgnoreChangeCB() || grid.getColumn() !== DASHBOARD_COLUMN_COUNT) {
-        return;
+    const readCurrentLayout = (grid: GridStack): DashboardLayoutWidget[] | null => {
+      if (grid.getColumn() !== DASHBOARD_COLUMN_COUNT) {
+        return null;
       }
 
       const saved = grid.save(false, false, undefined, DASHBOARD_COLUMN_COUNT);
       if (!Array.isArray(saved)) {
-        return;
+        return null;
       }
 
       const layout = normalizeGridLayout(
@@ -124,17 +125,47 @@ export function GridStackDashboard({
         })),
       );
 
-      if (layout.length !== widgets.length) {
+      return layout.length === widgets.length ? layout : null;
+    };
+
+    const clearPendingDebounce = () => {
+      if (debounceRef.current !== null) {
+        window.clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
+
+    const scheduleSave = (grid: GridStack) => {
+      if (grid.isIgnoreChangeCB()) {
         return;
       }
 
-      if (debounceRef.current !== null) {
-        window.clearTimeout(debounceRef.current);
+      const layout = readCurrentLayout(grid);
+      if (!layout) {
+        return;
       }
+
+      clearPendingDebounce();
       debounceRef.current = window.setTimeout(() => {
         debounceRef.current = null;
         void persistLayout(layout);
       }, SAVE_DEBOUNCE_MS);
+    };
+
+    const persistFinalInteractionLayout = (grid: GridStack) => {
+      clearPendingDebounce();
+
+      if (finalSaveFrameRef.current !== null) {
+        window.cancelAnimationFrame(finalSaveFrameRef.current);
+      }
+
+      finalSaveFrameRef.current = window.requestAnimationFrame(() => {
+        finalSaveFrameRef.current = null;
+        const layout = readCurrentLayout(grid);
+        if (layout) {
+          void persistLayout(layout);
+        }
+      });
     };
 
     const grid = GridStack.init(
@@ -164,11 +195,14 @@ export function GridStackDashboard({
 
     gridRef.current = grid;
     grid.on("change", () => scheduleSave(grid));
+    grid.on("dragstop", () => persistFinalInteractionLayout(grid));
+    grid.on("resizestop", () => persistFinalInteractionLayout(grid));
 
     return () => {
-      if (debounceRef.current !== null) {
-        window.clearTimeout(debounceRef.current);
-        debounceRef.current = null;
+      clearPendingDebounce();
+      if (finalSaveFrameRef.current !== null) {
+        window.cancelAnimationFrame(finalSaveFrameRef.current);
+        finalSaveFrameRef.current = null;
       }
       grid.destroy(false);
       gridRef.current = null;
