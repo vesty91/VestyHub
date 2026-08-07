@@ -20,6 +20,8 @@ La couche cliente `src/components/dashboard/gridstack-dashboard.tsx` reçoit uni
 
 GridStack utilise une grille desktop de 6 colonnes compatible avec les dimensions historiques de `dashboard_widgets`.
 
+Le mode `float: true` est activé sur desktop afin de conserver une position verticale choisie par l'utilisateur et d'autoriser des espaces libres dans la grille, au lieu de forcer systématiquement les widgets à se compacter vers le haut après un déplacement.
+
 ## Responsive
 
 - desktop : 6 colonnes ;
@@ -59,8 +61,9 @@ Le client :
 2. ignore les sauvegardes hors grille desktop 6 colonnes ;
 3. calcule une empreinte stable de la disposition ;
 4. ignore un état identique au dernier état enregistré ;
-5. applique un debounce de 400 ms ;
-6. sérialise les écritures afin qu'une requête ancienne ne puisse pas écraser un déplacement plus récent.
+5. lit la disposition finale après `dragstop` ou `resizestop` ;
+6. sérialise les écritures afin qu'une requête ancienne ne puisse pas écraser un déplacement plus récent ;
+7. utilise `keepalive` pour réduire le risque qu'un rechargement immédiat interrompe la sauvegarde.
 
 ## Sécurité
 
@@ -120,14 +123,15 @@ Après déploiement Docker :
 
 1. ouvrir `/dashboard` sur desktop ;
 2. déplacer chaque widget depuis sa poignée ;
-3. redimensionner les widgets ;
-4. attendre l'état `Disposition enregistrée` ;
-5. recharger la page et vérifier la restauration exacte ;
-6. passer en largeur tablette puis mobile ;
-7. revenir en desktop et vérifier que la disposition desktop n'a pas été remplacée par la version mobile ;
-8. tester les liens et boutons internes aux widgets ;
-9. vérifier les cinq thèmes : Obsidian, Midnight, Graphite, Carbon Gold et Light ;
-10. vérifier `/api/health/ready` après reconstruction Docker.
+3. laisser volontairement une ligne libre au-dessus d'un widget et vérifier qu'il reste à la position choisie ;
+4. redimensionner les widgets ;
+5. attendre l'état `Disposition enregistrée` ;
+6. recharger la page et vérifier la restauration exacte ;
+7. passer en largeur tablette puis mobile ;
+8. revenir en desktop et vérifier que la disposition desktop n'a pas été remplacée par la version mobile ;
+9. tester les liens et boutons internes aux widgets ;
+10. vérifier les cinq thèmes : Obsidian, Midnight, Graphite, Carbon Gold et Light ;
+11. vérifier `/api/health/ready` après reconstruction Docker.
 
 ## Déploiement Docker
 
