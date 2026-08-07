@@ -10,6 +10,11 @@ import { favoriteGroups, favorites } from "@/db/schema";
 import { writeAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/dal";
 import { getRequestContext } from "@/lib/auth/request-context";
+import {
+  FAVORITES_DEFAULT_ITEM_HEIGHT,
+  FAVORITES_DEFAULT_ITEM_WIDTH,
+  findFirstAvailableFavoriteTilePosition,
+} from "@/lib/favorites/layout";
 import { favoriteFormSchema, favoriteGroupSchema } from "@/lib/favorites/schema";
 import { logger } from "@/lib/logging/logger";
 
@@ -67,10 +72,29 @@ export async function createFavoriteAction(
   }
 
   try {
-    const [sortResult] = await db
-      .select({ maximum: max(favorites.sortOrder) })
-      .from(favorites)
-      .where(eq(favorites.userId, user.id));
+    const [[sortResult], existingTiles] = await Promise.all([
+      db
+        .select({ maximum: max(favorites.sortOrder) })
+        .from(favorites)
+        .where(eq(favorites.userId, user.id)),
+      db
+        .select({
+          x: favorites.positionX,
+          y: favorites.positionY,
+          width: favorites.width,
+          height: favorites.height,
+        })
+        .from(favorites)
+        .where(eq(favorites.userId, user.id)),
+    ]);
+
+    const placement = findFirstAvailableFavoriteTilePosition(existingTiles);
+    if (!placement) {
+      return {
+        status: "error",
+        message: "Aucun emplacement libre n’est disponible pour ce favori.",
+      };
+    }
 
     const [created] = await db
       .insert(favorites)
@@ -89,6 +113,10 @@ export async function createFavoriteAction(
         healthCheckUrl: parsed.data.healthCheckUrl ?? null,
         sortOrder: Number(sortResult?.maximum ?? -1) + 1,
         isFavorite: parsed.data.isFavorite,
+        positionX: placement.x,
+        positionY: placement.y,
+        width: FAVORITES_DEFAULT_ITEM_WIDTH,
+        height: FAVORITES_DEFAULT_ITEM_HEIGHT,
       })
       .returning({ id: favorites.id });
 
