@@ -100,11 +100,17 @@ export function FavoriteForm({
             id="groupId"
             name="groupId"
             defaultValue={favorite?.groupId ?? ""}
-            className="h-10 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm outline-none focus:border-cyan-400/50"
+            className="border-border bg-background text-foreground focus:border-primary/50 focus:ring-ring/30 h-10 w-full rounded-xl border px-3 text-sm outline-none transition focus:ring-2"
           >
-            <option value="">Sans groupe</option>
+            <option value="" className="bg-popover text-popover-foreground">
+              Sans groupe
+            </option>
             {groups.map((group) => (
-              <option key={group.id} value={group.id}>
+              <option
+                key={group.id}
+                value={group.id}
+                className="bg-popover text-popover-foreground"
+              >
                 {group.name}
               </option>
             ))}
@@ -132,10 +138,14 @@ export function FavoriteForm({
             id="openMode"
             name="openMode"
             defaultValue={favorite?.openMode ?? "new_tab"}
-            className="h-10 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm outline-none focus:border-cyan-400/50"
+            className="border-border bg-background text-foreground focus:border-primary/50 focus:ring-ring/30 h-10 w-full rounded-xl border px-3 text-sm outline-none transition focus:ring-2"
           >
-            <option value="new_tab">Nouvel onglet</option>
-            <option value="same_tab">Même onglet</option>
+            <option value="new_tab" className="bg-popover text-popover-foreground">
+              Nouvel onglet
+            </option>
+            <option value="same_tab" className="bg-popover text-popover-foreground">
+              Même onglet
+            </option>
           </select>
         </div>
 
