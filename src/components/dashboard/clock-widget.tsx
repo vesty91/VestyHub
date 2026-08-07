@@ -19,8 +19,8 @@ export function ClockWidget() {
   }, []);
 
   return (
-    <div className="flex h-full min-h-36 flex-col justify-between rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(34,211,238,0.10),rgba(255,255,255,0.025))] p-5">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(34,211,238,0.10),rgba(255,255,255,0.025))] p-5">
+      <div className="flex items-center justify-between pr-10">
         <p className="text-sm text-zinc-400">Heure locale</p>
         <Clock3 className="size-4 text-cyan-300" />
       </div>
