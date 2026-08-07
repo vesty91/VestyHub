@@ -1,9 +1,10 @@
-import Link from "next/link";
-import { Activity, Container, LayoutGrid, Plus, ShieldCheck, Star } from "lucide-react";
 import { and, count, desc, eq } from "drizzle-orm";
+import { Activity, Container, LayoutGrid, Plus, ShieldCheck, Star } from "lucide-react";
+import Link from "next/link";
 
 import { ClockWidget } from "@/components/dashboard/clock-widget";
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
+import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
 import { StatusWidget } from "@/components/dashboard/status-widget";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -110,14 +111,16 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-[1600px] space-y-7">
       <PageHeader
         title={`Bonjour, ${user.name.split(" ")[0]}`}
-        description="Voici l’état actuel de ton environnement homelab, alimenté par PostgreSQL et le connecteur Docker du NAS."
+        description="Voici l’état actuel de ton environnement homelab, alimenté par PostgreSQL et les connecteurs réels du NAS."
         eyebrow={
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
               <span className="bg-success size-1.5 rounded-full" />
-              Phase 3A · v0.3.0
+              Phase 3F · v0.3.0
             </Badge>
-            <span className="text-muted-foreground text-xs">Vue instantanée</span>
+            <span className="text-muted-foreground text-xs">
+              Dashboard personnalisable
+            </span>
           </>
         }
         actions={
@@ -137,12 +140,9 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      <section className="grid auto-rows-[minmax(150px,auto)] grid-cols-1 gap-4 xl:grid-cols-6">
-        {widgets.length === 0 ? (
-          <Panel
-            className="xl:col-span-6"
-            contentClassName="grid min-h-52 place-items-center text-center"
-          >
+      <section aria-label="Widgets personnalisables">
+        {!dashboard || widgets.length === 0 ? (
+          <Panel contentClassName="grid min-h-52 place-items-center text-center">
             <div>
               <LayoutGrid className="text-muted-foreground mx-auto mb-3 size-7" />
               <p className="font-medium">Aucun widget enregistré</p>
@@ -152,13 +152,30 @@ export default async function DashboardPage() {
             </div>
           </Panel>
         ) : (
-          widgets.map((widget) => {
-            const span = Math.max(1, Math.min(6, widget.width));
-            const className =
-              span >= 4 ? "xl:col-span-4" : span >= 2 ? "xl:col-span-2" : "xl:col-span-1";
+          <GridStackDashboard
+            dashboardId={dashboard.id}
+            widgets={widgets.map((widget) => {
+              const contentMinHeight = ["favorites", "system-status"].includes(
+                widget.widgetType,
+              )
+                ? 2
+                : 1;
+              const minHeight = Math.max(widget.minHeight, contentMinHeight);
 
-            return (
-              <div key={widget.id} className={className}>
+              return {
+                id: widget.id,
+                title: widget.title,
+                positionX: widget.positionX,
+                positionY: widget.positionY,
+                width: widget.width,
+                height: Math.max(widget.height, minHeight),
+                minWidth: widget.minWidth,
+                minHeight,
+              };
+            })}
+          >
+            {widgets.map((widget) => (
+              <div key={widget.id} className="h-full">
                 {widget.widgetType === "clock" ? <ClockWidget /> : null}
                 {widget.widgetType === "favorites" ? (
                   <FavoritesWidget favorites={pinnedFavorites} />
@@ -175,8 +192,8 @@ export default async function DashboardPage() {
                   </Panel>
                 ) : null}
               </div>
-            );
-          })
+            ))}
+          </GridStackDashboard>
         )}
       </section>
 
