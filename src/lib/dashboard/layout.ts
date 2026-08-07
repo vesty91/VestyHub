@@ -54,7 +54,11 @@ export type GridLayoutInput = {
   h?: number;
 };
 
-function toBoundedInteger(value: number | undefined, min: number, max: number): number | null {
+function toBoundedInteger(
+  value: number | undefined,
+  min: number,
+  max: number,
+): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return null;
   }
@@ -62,7 +66,9 @@ function toBoundedInteger(value: number | undefined, min: number, max: number): 
   return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
-export function normalizeGridLayout(items: readonly GridLayoutInput[]): DashboardLayoutWidget[] {
+export function normalizeGridLayout(
+  items: readonly GridLayoutInput[],
+): DashboardLayoutWidget[] {
   const normalized: DashboardLayoutWidget[] = [];
 
   for (const item of items) {
