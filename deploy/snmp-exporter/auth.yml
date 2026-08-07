@@ -1,0 +1,9 @@
+auths:
+  synology_v3:
+    version: 3
+    security_level: authPriv
+    username: ${SNMPV3_USERNAME}
+    password: ${SNMPV3_AUTH_PASSWORD}
+    auth_protocol: SHA
+    priv_protocol: AES
+    priv_password: ${SNMPV3_PRIV_PASSWORD}
