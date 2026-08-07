@@ -44,7 +44,12 @@ export async function PATCH(request: Request) {
       const [ownedDashboard] = await tx
         .select({ id: dashboards.id })
         .from(dashboards)
-        .where(and(eq(dashboards.id, dashboardId), eq(dashboards.userId, session.user.id)))
+        .where(
+          and(
+            eq(dashboards.id, dashboardId),
+            eq(dashboards.userId, session.user.id),
+          ),
+        )
         .limit(1);
 
       if (!ownedDashboard) {
@@ -74,10 +79,16 @@ export async function PATCH(request: Request) {
         throw new LayoutAccessError();
       }
 
-      const constraints = new Map(storedWidgets.map((widget) => [widget.id, widget]));
+      const constraints = new Map(
+        storedWidgets.map((widget) => [widget.id, widget]),
+      );
       for (const widget of widgets) {
         const stored = constraints.get(widget.id);
-        if (!stored || widget.width < stored.minWidth || widget.height < stored.minHeight) {
+        if (
+          !stored ||
+          widget.width < stored.minWidth ||
+          widget.height < stored.minHeight
+        ) {
           throw new LayoutValidationError();
         }
       }
@@ -101,7 +112,10 @@ export async function PATCH(request: Request) {
           );
       }
 
-      await tx.update(dashboards).set({ updatedAt }).where(eq(dashboards.id, dashboardId));
+      await tx
+        .update(dashboards)
+        .set({ updatedAt })
+        .where(eq(dashboards.id, dashboardId));
     });
   } catch (error) {
     if (error instanceof LayoutAccessError) {
@@ -112,7 +126,10 @@ export async function PATCH(request: Request) {
     }
     if (error instanceof LayoutValidationError) {
       return NextResponse.json(
-        { error: "La disposition ne respecte pas les dimensions minimales des widgets." },
+        {
+          error:
+            "La disposition ne respecte pas les dimensions minimales des widgets.",
+        },
         { status: 400, headers: NO_STORE_HEADERS },
       );
     }
