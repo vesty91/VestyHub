@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { DEFAULT_THEME, THEME_IDS } from "@/lib/theme";
+import "gridstack/dist/gridstack.min.css";
+import "gridstack/dist/gridstack-extra.min.css";
 import "./globals.css";
 
 const geistSans = Geist({
