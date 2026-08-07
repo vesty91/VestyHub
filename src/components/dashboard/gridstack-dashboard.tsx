@@ -1,6 +1,6 @@
 "use client";
 
-import { GridStack, type GridStackWidget } from "gridstack";
+import { GridStack } from "gridstack";
 import { GripVertical } from "lucide-react";
 import { Children, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
@@ -30,8 +30,6 @@ type GridStackDashboardProps = {
   children: ReactNode;
 };
 
-const SAVE_DEBOUNCE_MS = 400;
-
 export function GridStackDashboard({
   dashboardId,
   widgets,
@@ -39,7 +37,6 @@ export function GridStackDashboard({
 }: GridStackDashboardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<GridStack | null>(null);
-  const debounceRef = useRef<number | null>(null);
   const finalSaveFrameRef = useRef<number | null>(null);
   const savingRef = useRef(false);
   const queuedLayoutRef = useRef<DashboardLayoutWidget[] | null>(null);
@@ -58,6 +55,10 @@ export function GridStackDashboard({
   );
   const lastSavedFingerprintRef = useRef(layoutFingerprint(initialLayout));
   const childNodes = Children.toArray(children);
+
+  useEffect(() => {
+    lastSavedFingerprintRef.current = layoutFingerprint(initialLayout);
+  }, [initialLayout]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -84,6 +85,7 @@ export function GridStackDashboard({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           cache: "no-store",
+          keepalive: true,
           body: JSON.stringify({ dashboardId, widgets: layout }),
         });
 
@@ -110,51 +112,23 @@ export function GridStackDashboard({
         return null;
       }
 
-      const saved = grid.save(false, false, undefined, DASHBOARD_COLUMN_COUNT);
-      if (!Array.isArray(saved)) {
-        return null;
-      }
-
       const layout = normalizeGridLayout(
-        (saved as GridStackWidget[]).map((item) => ({
-          id: item.id,
-          x: item.x,
-          y: item.y,
-          w: item.w,
-          h: item.h,
-        })),
+        grid.getGridItems().map((element) => {
+          const node = element.gridstackNode;
+          return {
+            id: node?.id,
+            x: node?.x,
+            y: node?.y,
+            w: node?.w,
+            h: node?.h,
+          };
+        }),
       );
 
       return layout.length === widgets.length ? layout : null;
     };
 
-    const clearPendingDebounce = () => {
-      if (debounceRef.current !== null) {
-        window.clearTimeout(debounceRef.current);
-        debounceRef.current = null;
-      }
-    };
-
-    const scheduleSave = (grid: GridStack) => {
-      if (grid.isIgnoreChangeCB()) {
-        return;
-      }
-
-      const layout = readCurrentLayout(grid);
-      if (!layout) {
-        return;
-      }
-
-      clearPendingDebounce();
-      debounceRef.current = window.setTimeout(() => {
-        debounceRef.current = null;
-        void persistLayout(layout);
-      }, SAVE_DEBOUNCE_MS);
-    };
-
-    const persistFinalInteractionLayout = (grid: GridStack) => {
-      clearPendingDebounce();
-
+    const persistSettledLayout = (grid: GridStack) => {
       if (finalSaveFrameRef.current !== null) {
         window.cancelAnimationFrame(finalSaveFrameRef.current);
       }
@@ -194,12 +168,12 @@ export function GridStackDashboard({
     }
 
     gridRef.current = grid;
-    grid.on("change", () => scheduleSave(grid));
-    grid.on("dragstop", () => persistFinalInteractionLayout(grid));
-    grid.on("resizestop", () => persistFinalInteractionLayout(grid));
+    grid.on("dragstart", () => setSaveStatus("idle"));
+    grid.on("resizestart", () => setSaveStatus("idle"));
+    grid.on("dragstop", () => persistSettledLayout(grid));
+    grid.on("resizestop", () => persistSettledLayout(grid));
 
     return () => {
-      clearPendingDebounce();
       if (finalSaveFrameRef.current !== null) {
         window.cancelAnimationFrame(finalSaveFrameRef.current);
         finalSaveFrameRef.current = null;
