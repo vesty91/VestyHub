@@ -52,15 +52,20 @@ describe("dashboard layout validation", () => {
   });
 
   it("bounds the number of widgets accepted in one request", () => {
-    const widgets = Array.from({ length: DASHBOARD_MAX_WIDGETS + 1 }, (_, index) => ({
-      id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-      x: 0,
-      y: index,
-      width: 1,
-      height: 1,
-    }));
+    const widgets = Array.from(
+      { length: DASHBOARD_MAX_WIDGETS + 1 },
+      (_, index) => ({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        x: 0,
+        y: index,
+        width: 1,
+        height: 1,
+      }),
+    );
 
-    expect(dashboardLayoutPayloadSchema.safeParse({ dashboardId, widgets }).success).toBe(false);
+    expect(
+      dashboardLayoutPayloadSchema.safeParse({ dashboardId, widgets }).success,
+    ).toBe(false);
   });
 });
 
