@@ -157,6 +157,11 @@ export function GridStackDashboard({
       container,
     );
 
+    if (!grid) {
+      setSaveStatus("error");
+      return;
+    }
+
     gridRef.current = grid;
     grid.on("change", () => scheduleSave(grid));
 
