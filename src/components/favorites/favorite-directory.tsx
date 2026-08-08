@@ -30,8 +30,7 @@ export function FavoriteDirectory({
     const tags = Array.isArray(item.tags) ? item.tags.join(" ") : "";
     const haystack = `${item.name} ${item.description ?? ""} ${tags}`.toLowerCase();
     return (
-      haystack.includes(normalizedQuery) &&
-      (group === "all" || item.groupName === group)
+      haystack.includes(normalizedQuery) && (group === "all" || item.groupName === group)
     );
   });
   const layoutMode = normalizedQuery.length === 0 && group === "all";

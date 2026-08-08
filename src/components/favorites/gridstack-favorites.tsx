@@ -100,7 +100,10 @@ export function GridStackFavorites({
         savingRef.current = false;
         const queued = queuedLayoutRef.current;
         queuedLayoutRef.current = null;
-        if (queued && favoriteLayoutFingerprint(queued) !== lastSavedFingerprintRef.current) {
+        if (
+          queued &&
+          favoriteLayoutFingerprint(queued) !== lastSavedFingerprintRef.current
+        ) {
           void persistLayout(queued);
         }
       }
