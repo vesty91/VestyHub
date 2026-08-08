@@ -15,6 +15,13 @@
       "when": 1785783764053,
       "tag": "0001_phase1_foundation_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786145134224,
+      "tag": "0002_reflective_mesmero",
+      "breakpoints": true
     }
   ]
 }
