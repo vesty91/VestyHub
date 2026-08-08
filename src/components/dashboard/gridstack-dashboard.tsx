@@ -2,10 +2,23 @@
 
 import { GridStack } from "gridstack";
 import { GripVertical } from "lucide-react";
-import { Children, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
+  LayoutControls,
+  type LayoutSaveStatus,
+} from "@/components/layout/layout-controls";
+import {
   DASHBOARD_COLUMN_COUNT,
+  buildDefaultDashboardLayout,
   layoutFingerprint,
   normalizeGridLayout,
   type DashboardLayoutWidget,
@@ -13,6 +26,7 @@ import {
 
 type DashboardGridWidget = {
   id: string;
+  widgetType: string;
   title: string;
   positionX: number;
   positionY: number;
@@ -21,8 +35,6 @@ type DashboardGridWidget = {
   minWidth: number;
   minHeight: number;
 };
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 type GridStackDashboardProps = {
   dashboardId: string;
@@ -39,8 +51,11 @@ export function GridStackDashboard({
   const gridRef = useRef<GridStack | null>(null);
   const finalSaveFrameRef = useRef<number | null>(null);
   const savingRef = useRef(false);
+  const editingRef = useRef(false);
   const queuedLayoutRef = useRef<DashboardLayoutWidget[] | null>(null);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const failedLayoutRef = useRef<DashboardLayoutWidget[] | null>(null);
+  const [saveStatus, setSaveStatus] = useState<LayoutSaveStatus>("idle");
+  const [isEditing, setIsEditing] = useState(false);
 
   const initialLayout = useMemo(
     () =>
@@ -53,6 +68,20 @@ export function GridStackDashboard({
       })),
     [widgets],
   );
+  const defaultLayout = useMemo(
+    () =>
+      buildDefaultDashboardLayout(
+        widgets.map((widget) => ({
+          id: widget.id,
+          widgetType: widget.widgetType,
+          width: widget.width,
+          height: widget.height,
+          minWidth: widget.minWidth,
+          minHeight: widget.minHeight,
+        })),
+      ),
+    [widgets],
+  );
   const lastSavedFingerprintRef = useRef(layoutFingerprint(initialLayout));
   const childNodes = Children.toArray(children);
 
@@ -60,13 +89,8 @@ export function GridStackDashboard({
     lastSavedFingerprintRef.current = layoutFingerprint(initialLayout);
   }, [initialLayout]);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const persistLayout = async (layout: DashboardLayoutWidget[]): Promise<void> => {
+  const persistLayout = useCallback(
+    async function persistLayout(layout: DashboardLayoutWidget[]): Promise<void> {
       const fingerprint = layoutFingerprint(layout);
       if (fingerprint === lastSavedFingerprintRef.current) {
         return;
@@ -78,6 +102,7 @@ export function GridStackDashboard({
       }
 
       savingRef.current = true;
+      failedLayoutRef.current = null;
       setSaveStatus("saving");
 
       try {
@@ -96,6 +121,7 @@ export function GridStackDashboard({
         lastSavedFingerprintRef.current = fingerprint;
         setSaveStatus("saved");
       } catch {
+        failedLayoutRef.current = layout;
         setSaveStatus("error");
       } finally {
         savingRef.current = false;
@@ -105,7 +131,15 @@ export function GridStackDashboard({
           void persistLayout(queued);
         }
       }
-    };
+    },
+    [dashboardId],
+  );
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
 
     const readCurrentLayout = (grid: GridStack): DashboardLayoutWidget[] | null => {
       if (grid.getColumn() !== DASHBOARD_COLUMN_COUNT) {
@@ -129,6 +163,10 @@ export function GridStackDashboard({
     };
 
     const persistSettledLayout = (grid: GridStack) => {
+      if (!editingRef.current) {
+        return;
+      }
+
       if (finalSaveFrameRef.current !== null) {
         window.cancelAnimationFrame(finalSaveFrameRef.current);
       }
@@ -149,6 +187,8 @@ export function GridStackDashboard({
         margin: 8,
         animate: true,
         float: true,
+        disableDrag: true,
+        disableResize: true,
         handle: ".grid-stack-handle",
         resizable: { handles: "se" },
         columnOpts: {
@@ -181,23 +221,77 @@ export function GridStackDashboard({
       grid.destroy(false);
       gridRef.current = null;
     };
-  }, [dashboardId, widgets]);
+  }, [persistLayout, widgets]);
+
+  useEffect(() => {
+    editingRef.current = isEditing;
+    gridRef.current?.enableMove(isEditing);
+    gridRef.current?.enableResize(isEditing);
+  }, [isEditing]);
+
+  const applyLayout = useCallback((layout: DashboardLayoutWidget[]) => {
+    const grid = gridRef.current;
+    if (!grid) {
+      return;
+    }
+
+    const elementsById = new Map(
+      grid
+        .getGridItems()
+        .map((element) => [element.gridstackNode?.id, element] as const)
+        .filter((entry): entry is [string, HTMLElement] => Boolean(entry[0])),
+    );
+
+    grid.batchUpdate();
+    for (const item of layout) {
+      const element = elementsById.get(item.id);
+      if (element) {
+        grid.update(element, {
+          x: item.x,
+          y: item.y,
+          w: item.width,
+          h: item.height,
+        });
+      }
+    }
+    grid.batchUpdate(false);
+  }, []);
+
+  const handleReset = () => {
+    const grid = gridRef.current;
+    if (!grid) {
+      return;
+    }
+
+    if (grid.getColumn() !== DASHBOARD_COLUMN_COUNT) {
+      window.alert("Repasse en vue ordinateur pour réinitialiser la disposition desktop.");
+      return;
+    }
+
+    if (!window.confirm("Réinitialiser la disposition du dashboard par défaut ?")) {
+      return;
+    }
+
+    applyLayout(defaultLayout);
+    void persistLayout(defaultLayout);
+  };
+
+  const handleRetry = () => {
+    const failedLayout = failedLayoutRef.current;
+    if (failedLayout) {
+      void persistLayout(failedLayout);
+    }
+  };
 
   return (
     <div className="space-y-2">
-      <div className="flex min-h-5 justify-end" aria-live="polite">
-        {saveStatus === "saving" ? (
-          <span className="text-muted-foreground text-xs">Enregistrement…</span>
-        ) : null}
-        {saveStatus === "saved" ? (
-          <span className="text-success text-xs">Disposition enregistrée</span>
-        ) : null}
-        {saveStatus === "error" ? (
-          <span className="text-destructive text-xs">
-            Impossible d’enregistrer la disposition. Tes changements restent affichés.
-          </span>
-        ) : null}
-      </div>
+      <LayoutControls
+        isEditing={isEditing}
+        saveStatus={saveStatus}
+        onToggleEditing={() => setIsEditing((value) => !value)}
+        onReset={handleReset}
+        onRetry={handleRetry}
+      />
 
       <div ref={containerRef} className="grid-stack">
         {widgets.map((widget, index) => (
@@ -213,14 +307,16 @@ export function GridStackDashboard({
             gs-min-h={widget.minHeight}
           >
             <div className="grid-stack-item-content relative overflow-visible">
-              <button
-                type="button"
-                className="grid-stack-handle border-border/70 bg-surface-elevated/90 text-muted-foreground hover:text-foreground focus-visible:ring-primary absolute top-2 right-2 z-20 flex size-8 cursor-grab items-center justify-center rounded-lg border shadow-sm transition focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
-                aria-label={`Déplacer le widget ${widget.title}`}
-                title={`Déplacer ${widget.title}`}
-              >
-                <GripVertical className="size-4" aria-hidden="true" />
-              </button>
+              {isEditing ? (
+                <button
+                  type="button"
+                  className="grid-stack-handle border-border/70 bg-surface-elevated/90 text-muted-foreground hover:text-foreground focus-visible:ring-primary absolute top-2 right-2 z-20 flex size-8 cursor-grab items-center justify-center rounded-lg border shadow-sm transition focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
+                  aria-label={`Déplacer le widget ${widget.title}`}
+                  title={`Déplacer ${widget.title}`}
+                >
+                  <GripVertical className="size-4" aria-hidden="true" />
+                </button>
+              ) : null}
               <div className="h-full">{childNodes[index] ?? null}</div>
             </div>
           </div>
