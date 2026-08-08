@@ -18,11 +18,7 @@ export const favoriteLayoutItemSchema = z
       .min(0)
       .max(FAVORITES_COLUMN_COUNT - 1),
     y: z.number().int().min(0).max(FAVORITES_MAX_ROWS),
-    width: z
-      .number()
-      .int()
-      .min(FAVORITES_MIN_ITEM_WIDTH)
-      .max(FAVORITES_COLUMN_COUNT),
+    width: z.number().int().min(FAVORITES_MIN_ITEM_WIDTH).max(FAVORITES_COLUMN_COUNT),
     height: z
       .number()
       .int()
