@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DASHBOARD_COLUMN_COUNT,
   DASHBOARD_MAX_WIDGETS,
+  buildDefaultDashboardLayout,
   dashboardLayoutPayloadSchema,
   layoutFingerprint,
   normalizeGridLayout,
@@ -63,6 +64,69 @@ describe("dashboard layout validation", () => {
     expect(dashboardLayoutPayloadSchema.safeParse({ dashboardId, widgets }).success).toBe(
       false,
     );
+  });
+});
+
+describe("dashboard default layout", () => {
+  it("restores the seeded layout for the built-in widgets", () => {
+    expect(
+      buildDefaultDashboardLayout([
+        {
+          id: "clock-id",
+          widgetType: "clock",
+          width: 5,
+          height: 4,
+          minWidth: 1,
+          minHeight: 1,
+        },
+        {
+          id: "favorites-id",
+          widgetType: "favorites",
+          width: 2,
+          height: 6,
+          minWidth: 1,
+          minHeight: 2,
+        },
+        {
+          id: "status-id",
+          widgetType: "system-status",
+          width: 6,
+          height: 5,
+          minWidth: 1,
+          minHeight: 2,
+        },
+      ]),
+    ).toEqual([
+      { id: "clock-id", x: 0, y: 0, width: 2, height: 1 },
+      { id: "favorites-id", x: 2, y: 0, width: 4, height: 2 },
+      { id: "status-id", x: 0, y: 1, width: 2, height: 2 },
+    ]);
+  });
+
+  it("places unknown widgets in the first free area without collisions", () => {
+    expect(
+      buildDefaultDashboardLayout([
+        {
+          id: "clock-id",
+          widgetType: "clock",
+          width: 2,
+          height: 1,
+          minWidth: 1,
+          minHeight: 1,
+        },
+        {
+          id: "custom-id",
+          widgetType: "custom",
+          width: 2,
+          height: 1,
+          minWidth: 1,
+          minHeight: 1,
+        },
+      ]),
+    ).toEqual([
+      { id: "clock-id", x: 0, y: 0, width: 2, height: 1 },
+      { id: "custom-id", x: 2, y: 0, width: 2, height: 1 },
+    ]);
   });
 });
 
