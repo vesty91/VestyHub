@@ -235,12 +235,13 @@ export function GridStackDashboard({
       return;
     }
 
-    const elementsById = new Map(
-      grid
-        .getGridItems()
-        .map((element) => [element.gridstackNode?.id, element] as const)
-        .filter((entry): entry is [string, HTMLElement] => Boolean(entry[0])),
-    );
+    const elementsById = new Map<string, HTMLElement>();
+    for (const element of grid.getGridItems()) {
+      const id = element.gridstackNode?.id;
+      if (id) {
+        elementsById.set(id, element);
+      }
+    }
 
     grid.batchUpdate();
     for (const item of layout) {
