@@ -73,6 +73,7 @@ export default async function DashboardPage() {
 
   const favoriteCount = Number(favoriteStats[0]?.value ?? 0);
   const groupCount = Number(groupStats[0]?.value ?? 0);
+  const visibleWidgets = widgets.filter((widget) => widget.isVisible);
 
   const stats = [
     {
@@ -93,8 +94,8 @@ export default async function DashboardPage() {
     },
     {
       label: "Widgets",
-      value: widgets.length,
-      detail: dashboard?.name ?? "Dashboard à initialiser",
+      value: visibleWidgets.length,
+      detail: `${widgets.length} enregistré${widgets.length > 1 ? "s" : ""}`,
       icon: <LayoutGrid className="size-4" />,
       tone: "info" as const,
     },
@@ -141,20 +142,24 @@ export default async function DashboardPage() {
       </section>
 
       <section aria-label="Widgets personnalisables">
-        {!dashboard || widgets.length === 0 ? (
+        {!dashboard ? (
           <Panel contentClassName="grid min-h-52 place-items-center text-center">
             <div>
               <LayoutGrid className="text-muted-foreground mx-auto mb-3 size-7" />
-              <p className="font-medium">Aucun widget enregistré</p>
+              <p className="font-medium">Aucun dashboard enregistré</p>
               <p className="text-muted-foreground mt-1 text-sm">
-                Lance le seed pour créer la disposition initiale.
+                Lance le seed pour créer le dashboard initial.
               </p>
             </div>
           </Panel>
         ) : (
           <GridStackDashboard
             dashboardId={dashboard.id}
-            widgets={widgets.map((widget) => {
+            widgetStates={widgets.map((widget) => ({
+              type: widget.widgetType,
+              isVisible: widget.isVisible,
+            }))}
+            widgets={visibleWidgets.map((widget) => {
               const contentMinHeight = ["favorites", "system-status"].includes(
                 widget.widgetType,
               )
@@ -175,7 +180,7 @@ export default async function DashboardPage() {
               };
             })}
           >
-            {widgets.map((widget) => (
+            {visibleWidgets.map((widget) => (
               <div key={widget.id} className="h-full">
                 {widget.widgetType === "clock" ? <ClockWidget /> : null}
                 {widget.widgetType === "favorites" ? (
