@@ -44,16 +44,14 @@ export function DashboardWidgetManager({
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         body: JSON.stringify(
-          isVisible
-            ? { dashboardId, type, isVisible: false }
-            : { dashboardId, type },
+          isVisible ? { dashboardId, type, isVisible: false } : { dashboardId, type },
         ),
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         throw new Error(payload?.error ?? `Mutation refusée (${response.status}).`);
       }
 
@@ -82,9 +80,11 @@ export function DashboardWidgetManager({
           </p>
         </div>
         <span className="text-muted-foreground text-xs">
-          {DASHBOARD_WIDGET_CATALOG.filter(
-            (widget) => widgetStateByType.get(widget.type) === true,
-          ).length}
+          {
+            DASHBOARD_WIDGET_CATALOG.filter(
+              (widget) => widgetStateByType.get(widget.type) === true,
+            ).length
+          }
           /{DASHBOARD_WIDGET_CATALOG.length} affichés
         </span>
       </div>
