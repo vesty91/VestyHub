@@ -179,11 +179,17 @@ export function buildDefaultDashboardLayout(
         }
       : null;
 
-    if (
-      position &&
-      occupied.some((item) => rectanglesOverlap({ ...position, width, height }, item))
-    ) {
-      position = null;
+    if (position) {
+      const candidate: DashboardWidgetRect = {
+        x: position.x,
+        y: position.y,
+        width,
+        height,
+      };
+
+      if (occupied.some((item) => rectanglesOverlap(candidate, item))) {
+        position = null;
+      }
     }
 
     position ??= findFirstAvailableDashboardPosition(occupied, width, height);
