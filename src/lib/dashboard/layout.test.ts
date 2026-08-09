@@ -5,6 +5,7 @@ import {
   DASHBOARD_MAX_WIDGETS,
   buildDefaultDashboardLayout,
   dashboardLayoutPayloadSchema,
+  findDashboardWidgetPlacement,
   layoutFingerprint,
   normalizeGridLayout,
 } from "./layout";
@@ -127,6 +128,21 @@ describe("dashboard default layout", () => {
       { id: "clock-id", x: 0, y: 0, width: 2, height: 1 },
       { id: "custom-id", x: 2, y: 0, width: 2, height: 1 },
     ]);
+  });
+
+  it("finds the first free position for a newly added widget", () => {
+    expect(
+      findDashboardWidgetPlacement(
+        [{ x: 0, y: 0, width: DASHBOARD_COLUMN_COUNT, height: 1 }],
+        2,
+        2,
+      ),
+    ).toEqual({ x: 0, y: 1 });
+  });
+
+  it("rejects invalid placement dimensions", () => {
+    expect(findDashboardWidgetPlacement([], 0, 1)).toBeNull();
+    expect(findDashboardWidgetPlacement([], DASHBOARD_COLUMN_COUNT + 1, 1)).toBeNull();
   });
 });
 

@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 
+import { DashboardWidgetManager } from "@/components/dashboard/dashboard-widget-manager";
 import {
   LayoutControls,
   type LayoutSaveStatus,
@@ -36,15 +37,22 @@ type DashboardGridWidget = {
   minHeight: number;
 };
 
+type DashboardWidgetState = {
+  type: string;
+  isVisible: boolean;
+};
+
 type GridStackDashboardProps = {
   dashboardId: string;
   widgets: DashboardGridWidget[];
+  widgetStates: DashboardWidgetState[];
   children: ReactNode;
 };
 
 export function GridStackDashboard({
   dashboardId,
   widgets,
+  widgetStates,
   children,
 }: GridStackDashboardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -295,6 +303,10 @@ export function GridStackDashboard({
         onReset={handleReset}
         onRetry={handleRetry}
       />
+
+      {isEditing ? (
+        <DashboardWidgetManager dashboardId={dashboardId} widgets={widgetStates} />
+      ) : null}
 
       <div ref={containerRef} className="grid-stack">
         {widgets.map((widget, index) => (
