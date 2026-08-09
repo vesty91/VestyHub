@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const DASHBOARD_WIDGET_TYPES = ["clock", "favorites", "system-status"] as const;
+import { MONITORING_RANGES } from "@/connectors/monitoring/types";
+
+export const DASHBOARD_WIDGET_TYPES = [
+  "clock",
+  "favorites",
+  "system-status",
+  "monitoring",
+] as const;
 
 export const dashboardWidgetTypeSchema = z.enum(DASHBOARD_WIDGET_TYPES);
 
@@ -43,6 +50,14 @@ export const systemStatusWidgetConfigurationSchema = z
     },
   );
 
+export const monitoringWidgetConfigurationSchema = z
+  .object({
+    range: z.enum(MONITORING_RANGES).default("1h"),
+    showAlerts: z.boolean().default(true),
+    showSources: z.boolean().default(true),
+  })
+  .strict();
+
 export const dashboardWidgetSettingsPayloadSchema = z.discriminatedUnion("type", [
   z
     .object({
@@ -65,6 +80,13 @@ export const dashboardWidgetSettingsPayloadSchema = z.discriminatedUnion("type",
       configuration: systemStatusWidgetConfigurationSchema,
     })
     .strict(),
+  z
+    .object({
+      dashboardId: z.string().uuid(),
+      type: z.literal("monitoring"),
+      configuration: monitoringWidgetConfigurationSchema,
+    })
+    .strict(),
 ]);
 
 export type DashboardWidgetType = z.infer<typeof dashboardWidgetTypeSchema>;
@@ -75,15 +97,20 @@ export type FavoritesWidgetConfiguration = z.infer<
 export type SystemStatusWidgetConfiguration = z.infer<
   typeof systemStatusWidgetConfigurationSchema
 >;
+export type MonitoringWidgetConfiguration = z.infer<
+  typeof monitoringWidgetConfigurationSchema
+>;
 export type DashboardWidgetConfiguration =
   | ClockWidgetConfiguration
   | FavoritesWidgetConfiguration
-  | SystemStatusWidgetConfiguration;
+  | SystemStatusWidgetConfiguration
+  | MonitoringWidgetConfiguration;
 
 export type DashboardWidgetConfigurationByType = {
   clock: ClockWidgetConfiguration;
   favorites: FavoritesWidgetConfiguration;
   "system-status": SystemStatusWidgetConfiguration;
+  monitoring: MonitoringWidgetConfiguration;
 };
 
 export type DashboardWidgetDefinition = {
@@ -128,6 +155,16 @@ export const DASHBOARD_WIDGET_CATALOG: readonly DashboardWidgetDefinition[] = [
     minHeight: 2,
     refreshInterval: 15000,
   },
+  {
+    type: "monitoring",
+    title: "Monitoring",
+    description: "Affiche les métriques Prometheus, alertes et sources d’observabilité.",
+    width: 4,
+    height: 2,
+    minWidth: 3,
+    minHeight: 2,
+    refreshInterval: 15000,
+  },
 ] as const;
 
 const catalogByType = new Map(
@@ -159,6 +196,10 @@ export function parseDashboardWidgetConfiguration<T extends DashboardWidgetType>
       ) as DashboardWidgetConfigurationByType[T];
     case "system-status":
       return systemStatusWidgetConfigurationSchema.parse(
+        configuration,
+      ) as DashboardWidgetConfigurationByType[T];
+    case "monitoring":
+      return monitoringWidgetConfigurationSchema.parse(
         configuration,
       ) as DashboardWidgetConfigurationByType[T];
   }
