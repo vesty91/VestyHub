@@ -4,6 +4,16 @@ export const DASHBOARD_WIDGET_TYPES = ["clock", "favorites", "system-status"] as
 
 export const dashboardWidgetTypeSchema = z.enum(DASHBOARD_WIDGET_TYPES);
 
+export const dashboardWidgetSelectionPayloadSchema = z.object({
+  dashboardId: z.string().uuid(),
+  type: dashboardWidgetTypeSchema,
+});
+
+export const dashboardWidgetVisibilityPayloadSchema =
+  dashboardWidgetSelectionPayloadSchema.extend({
+    isVisible: z.boolean(),
+  });
+
 export type DashboardWidgetType = z.infer<typeof dashboardWidgetTypeSchema>;
 
 export type DashboardWidgetDefinition = {
