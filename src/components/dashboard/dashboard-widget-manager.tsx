@@ -33,9 +33,7 @@ export function DashboardWidgetManager({
   );
 
   async function changeWidget(type: DashboardWidgetType) {
-    const storedVisibility = widgetStateByType.get(type);
-    const isStored = storedVisibility !== undefined;
-    const isVisible = storedVisibility === true;
+    const isVisible = widgetStateByType.get(type) === true;
 
     setPendingType(type);
     setError(null);
@@ -97,6 +95,15 @@ export function DashboardWidgetManager({
           const isStored = storedVisibility !== undefined;
           const isVisible = storedVisibility === true;
           const isPending = pendingType === widget.type;
+          const statusLabel = isVisible ? "Affiché" : isStored ? "Masqué" : "Disponible";
+          const actionLabel = isPending
+            ? "Mise à jour…"
+            : isVisible
+              ? "Masquer"
+              : isStored
+                ? "Afficher"
+                : "Ajouter";
+          const ActionIcon = isVisible ? EyeOff : isStored ? Eye : Plus;
 
           return (
             <div
@@ -117,7 +124,7 @@ export function DashboardWidgetManager({
                       : "bg-muted text-muted-foreground rounded-full px-2 py-1 text-[10px] font-medium"
                   }
                 >
-                  {isVisible ? "Affiché" : isStored ? "Masqué" : "Disponible"}
+                  {statusLabel}
                 </span>
               </div>
 
@@ -129,20 +136,8 @@ export function DashboardWidgetManager({
                 disabled={pendingType !== null}
                 onClick={() => void changeWidget(widget.type)}
               >
-                {isVisible ? (
-                  <EyeOff aria-hidden="true" />
-                ) : isStored ? (
-                  <Eye aria-hidden="true" />
-                ) : (
-                  <Plus aria-hidden="true" />
-                )}
-                {isPending
-                  ? "Mise à jour…"
-                  : isVisible
-                    ? "Masquer"
-                    : isStored
-                      ? "Afficher"
-                      : "Ajouter"}
+                <ActionIcon aria-hidden="true" />
+                {actionLabel}
               </Button>
             </div>
           );
