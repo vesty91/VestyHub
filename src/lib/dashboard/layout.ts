@@ -95,7 +95,10 @@ function toBoundedInteger(
   return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
-function rectanglesOverlap(left: DashboardWidgetRect, right: DashboardWidgetRect): boolean {
+function rectanglesOverlap(
+  left: DashboardWidgetRect,
+  right: DashboardWidgetRect,
+): boolean {
   return !(
     left.x + left.width <= right.x ||
     right.x + right.width <= left.x ||
@@ -178,9 +181,7 @@ export function buildDefaultDashboardLayout(
 
     if (
       position &&
-      occupied.some((item) =>
-        rectanglesOverlap({ ...position, width, height }, item),
-      )
+      occupied.some((item) => rectanglesOverlap({ ...position, width, height }, item))
     ) {
       position = null;
     }

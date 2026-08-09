@@ -120,12 +120,8 @@ export function findFirstAvailableFavoriteTilePosition(
   return null;
 }
 
-export function buildDefaultFavoriteLayout(
-  ids: readonly string[],
-): FavoriteLayoutItem[] {
-  const itemsPerRow = Math.floor(
-    FAVORITES_COLUMN_COUNT / FAVORITES_DEFAULT_ITEM_WIDTH,
-  );
+export function buildDefaultFavoriteLayout(ids: readonly string[]): FavoriteLayoutItem[] {
+  const itemsPerRow = Math.floor(FAVORITES_COLUMN_COUNT / FAVORITES_DEFAULT_ITEM_WIDTH);
 
   return ids.map((id, index) => ({
     id,

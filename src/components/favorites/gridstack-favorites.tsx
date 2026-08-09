@@ -260,7 +260,9 @@ export function GridStackFavorites({
     }
 
     if (grid.getColumn() !== FAVORITES_COLUMN_COUNT) {
-      window.alert("Repasse en vue ordinateur pour réinitialiser la disposition desktop.");
+      window.alert(
+        "Repasse en vue ordinateur pour réinitialiser la disposition desktop.",
+      );
       return;
     }
 

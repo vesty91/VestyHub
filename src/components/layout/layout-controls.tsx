@@ -27,7 +27,9 @@ export function LayoutControls({
           <span className="text-success">Disposition enregistrée</span>
         ) : null}
         {saveStatus === "error" ? (
-          <span className="text-destructive">Impossible d’enregistrer la disposition.</span>
+          <span className="text-destructive">
+            Impossible d’enregistrer la disposition.
+          </span>
         ) : null}
         {saveStatus === "idle" ? (
           <span>{isEditing ? "Mode édition actif" : "Disposition verrouillée"}</span>

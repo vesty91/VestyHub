@@ -265,7 +265,9 @@ export function GridStackDashboard({
     }
 
     if (grid.getColumn() !== DASHBOARD_COLUMN_COUNT) {
-      window.alert("Repasse en vue ordinateur pour réinitialiser la disposition desktop.");
+      window.alert(
+        "Repasse en vue ordinateur pour réinitialiser la disposition desktop.",
+      );
       return;
     }
 
