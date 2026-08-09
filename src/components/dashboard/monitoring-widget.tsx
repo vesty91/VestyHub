@@ -68,7 +68,6 @@ export function MonitoringWidget({
       }
     }
 
-    setIsLoading(true);
     void loadOverview();
     const timer = window.setInterval(() => void loadOverview(), REFRESH_INTERVAL_MS);
 
