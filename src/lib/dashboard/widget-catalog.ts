@@ -14,7 +14,67 @@ export const dashboardWidgetVisibilityPayloadSchema =
     isVisible: z.boolean(),
   });
 
+export const clockWidgetConfigurationSchema = z
+  .object({
+    showSeconds: z.boolean().default(true),
+    showDate: z.boolean().default(true),
+    hour12: z.boolean().default(false),
+  })
+  .strict();
+
+export const favoritesWidgetConfigurationSchema = z
+  .object({
+    limit: z.number().int().min(1).max(8).default(6),
+  })
+  .strict();
+
+export const systemStatusWidgetConfigurationSchema = z
+  .object({
+    showDatabase: z.boolean().default(true),
+    showDocker: z.boolean().default(true),
+    showSession: z.boolean().default(true),
+  })
+  .strict()
+  .refine(
+    (configuration) =>
+      configuration.showDatabase || configuration.showDocker || configuration.showSession,
+    {
+      message: "Au moins un bloc de statut doit rester affiché.",
+    },
+  );
+
+export const dashboardWidgetSettingsPayloadSchema = z.discriminatedUnion("type", [
+  z.object({
+    dashboardId: z.string().uuid(),
+    type: z.literal("clock"),
+    configuration: clockWidgetConfigurationSchema,
+  }),
+  z.object({
+    dashboardId: z.string().uuid(),
+    type: z.literal("favorites"),
+    configuration: favoritesWidgetConfigurationSchema,
+  }),
+  z.object({
+    dashboardId: z.string().uuid(),
+    type: z.literal("system-status"),
+    configuration: systemStatusWidgetConfigurationSchema,
+  }),
+]);
+
 export type DashboardWidgetType = z.infer<typeof dashboardWidgetTypeSchema>;
+export type ClockWidgetConfiguration = z.infer<typeof clockWidgetConfigurationSchema>;
+export type FavoritesWidgetConfiguration = z.infer<
+  typeof favoritesWidgetConfigurationSchema
+>;
+export type SystemStatusWidgetConfiguration = z.infer<
+  typeof systemStatusWidgetConfigurationSchema
+>;
+
+export type DashboardWidgetConfigurationByType = {
+  clock: ClockWidgetConfiguration;
+  favorites: FavoritesWidgetConfiguration;
+  "system-status": SystemStatusWidgetConfiguration;
+};
 
 export type DashboardWidgetDefinition = {
   type: DashboardWidgetType;
@@ -72,4 +132,28 @@ export function getDashboardWidgetDefinition(
     throw new Error(`Widget dashboard non enregistré : ${type}`);
   }
   return definition;
+}
+
+export function parseDashboardWidgetConfiguration<T extends DashboardWidgetType>(
+  type: T,
+  configuration: unknown,
+): DashboardWidgetConfigurationByType[T] {
+  switch (type) {
+    case "clock":
+      return clockWidgetConfigurationSchema.parse(configuration) as DashboardWidgetConfigurationByType[T];
+    case "favorites":
+      return favoritesWidgetConfigurationSchema.parse(
+        configuration,
+      ) as DashboardWidgetConfigurationByType[T];
+    case "system-status":
+      return systemStatusWidgetConfigurationSchema.parse(
+        configuration,
+      ) as DashboardWidgetConfigurationByType[T];
+  }
+}
+
+export function getDefaultDashboardWidgetConfiguration<T extends DashboardWidgetType>(
+  type: T,
+): DashboardWidgetConfigurationByType[T] {
+  return parseDashboardWidgetConfiguration(type, {});
 }
