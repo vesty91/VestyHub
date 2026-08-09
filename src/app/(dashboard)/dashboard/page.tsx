@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ClockWidget } from "@/components/dashboard/clock-widget";
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
 import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
+import { MonitoringWidget } from "@/components/dashboard/monitoring-widget";
 import { StatusWidget } from "@/components/dashboard/status-widget";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
               <span className="bg-success size-1.5 rounded-full" />
-              Phase 3J · v0.3.0
+              Phase 3K · v0.3.0
             </Badge>
             <span className="text-muted-foreground text-xs">
               Dashboard personnalisable
@@ -162,7 +163,7 @@ export default async function DashboardPage() {
               configuration: widget.configuration,
             }))}
             widgets={visibleWidgets.map((widget) => {
-              const contentMinHeight = ["favorites", "system-status"].includes(
+              const contentMinHeight = ["favorites", "system-status", "monitoring"].includes(
                 widget.widgetType,
               )
                 ? 2
@@ -211,7 +212,17 @@ export default async function DashboardPage() {
                     )}
                   />
                 ) : null}
-                {!["clock", "favorites", "system-status"].includes(widget.widgetType) ? (
+                {widget.widgetType === "monitoring" ? (
+                  <MonitoringWidget
+                    configuration={resolveDashboardWidgetConfiguration(
+                      "monitoring",
+                      widget.configuration,
+                    )}
+                  />
+                ) : null}
+                {!["clock", "favorites", "system-status", "monitoring"].includes(
+                  widget.widgetType,
+                ) ? (
                   <Panel className="h-full">
                     <p className="text-sm font-medium">{widget.title}</p>
                     <p className="text-muted-foreground mt-2 text-xs">
