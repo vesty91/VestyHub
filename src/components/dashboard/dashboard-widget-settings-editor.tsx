@@ -4,12 +4,20 @@ import { Save, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { MONITORING_RANGES, type MonitoringRange } from "@/connectors/monitoring/types";
 import {
   resolveDashboardWidgetConfiguration,
   type DashboardWidgetType,
 } from "@/lib/dashboard/widget-catalog";
 
-type SettingsDraft = Record<string, boolean | number>;
+type SettingsDraft = Record<string, boolean | number | string>;
+
+const MONITORING_RANGE_LABELS: Record<MonitoringRange, string> = {
+  "1h": "1 heure",
+  "6h": "6 heures",
+  "24h": "24 heures",
+  "7d": "7 jours",
+};
 
 export function DashboardWidgetSettingsEditor({
   dashboardId,
@@ -141,6 +149,38 @@ export function DashboardWidgetSettingsEditor({
               Garde au moins un bloc de statut affiché.
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {type === "monitoring" ? (
+        <div className="space-y-3">
+          <label className="text-muted-foreground flex items-center justify-between gap-3 text-xs">
+            <span>Période des métriques</span>
+            <select
+              value={String(draft.range ?? "1h")}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, range: event.target.value }))
+              }
+              className="border-border bg-background text-foreground focus-visible:ring-primary h-8 rounded-md border px-2 text-xs outline-none focus-visible:ring-2"
+              aria-label="Période du widget monitoring"
+            >
+              {MONITORING_RANGES.map((range) => (
+                <option key={range} value={range}>
+                  {MONITORING_RANGE_LABELS[range]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <SettingCheckbox
+            label="Afficher les alertes"
+            checked={draft.showAlerts === true}
+            onChange={(checked) => setBooleanSetting("showAlerts", checked)}
+          />
+          <SettingCheckbox
+            label="Afficher l’état des sources"
+            checked={draft.showSources === true}
+            onChange={(checked) => setBooleanSetting("showSources", checked)}
+          />
         </div>
       ) : null}
 
