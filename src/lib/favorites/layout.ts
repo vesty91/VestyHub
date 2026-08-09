@@ -120,6 +120,18 @@ export function findFirstAvailableFavoriteTilePosition(
   return null;
 }
 
+export function buildDefaultFavoriteLayout(ids: readonly string[]): FavoriteLayoutItem[] {
+  const itemsPerRow = Math.floor(FAVORITES_COLUMN_COUNT / FAVORITES_DEFAULT_ITEM_WIDTH);
+
+  return ids.map((id, index) => ({
+    id,
+    x: (index % itemsPerRow) * FAVORITES_DEFAULT_ITEM_WIDTH,
+    y: Math.floor(index / itemsPerRow) * FAVORITES_DEFAULT_ITEM_HEIGHT,
+    width: FAVORITES_DEFAULT_ITEM_WIDTH,
+    height: FAVORITES_DEFAULT_ITEM_HEIGHT,
+  }));
+}
+
 export function normalizeFavoriteGridLayout(
   items: readonly FavoriteGridLayoutInput[],
 ): FavoriteLayoutItem[] {

@@ -58,6 +58,31 @@ export type GridLayoutInput = {
   h?: number;
 };
 
+export type DashboardDefaultLayoutInput = {
+  id: string;
+  widgetType: string;
+  width: number;
+  height: number;
+  minWidth: number;
+  minHeight: number;
+};
+
+type DashboardWidgetRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const DASHBOARD_DEFAULT_WIDGET_LAYOUTS: Record<
+  string,
+  Omit<DashboardLayoutWidget, "id">
+> = {
+  clock: { x: 0, y: 0, width: 2, height: 1 },
+  favorites: { x: 2, y: 0, width: 4, height: 2 },
+  "system-status": { x: 0, y: 1, width: 2, height: 2 },
+};
+
 function toBoundedInteger(
   value: number | undefined,
   min: number,
@@ -68,6 +93,35 @@ function toBoundedInteger(
   }
 
   return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function rectanglesOverlap(
+  left: DashboardWidgetRect,
+  right: DashboardWidgetRect,
+): boolean {
+  return !(
+    left.x + left.width <= right.x ||
+    right.x + right.width <= left.x ||
+    left.y + left.height <= right.y ||
+    right.y + right.height <= left.y
+  );
+}
+
+function findFirstAvailableDashboardPosition(
+  items: readonly DashboardWidgetRect[],
+  width: number,
+  height: number,
+): { x: number; y: number } | null {
+  for (let y = 0; y <= DASHBOARD_MAX_ROWS; y += 1) {
+    for (let x = 0; x <= DASHBOARD_COLUMN_COUNT - width; x += 1) {
+      const candidate = { x, y, width, height };
+      if (!items.some((item) => rectanglesOverlap(candidate, item))) {
+        return { x, y };
+      }
+    }
+  }
+
+  return null;
 }
 
 export function normalizeGridLayout(
@@ -99,6 +153,62 @@ export function normalizeGridLayout(
   }
 
   return normalized;
+}
+
+export function buildDefaultDashboardLayout(
+  widgets: readonly DashboardDefaultLayoutInput[],
+): DashboardLayoutWidget[] {
+  const layout: DashboardLayoutWidget[] = [];
+  const occupied: DashboardWidgetRect[] = [];
+
+  for (const widget of widgets) {
+    const preset = DASHBOARD_DEFAULT_WIDGET_LAYOUTS[widget.widgetType];
+    const width = Math.min(
+      DASHBOARD_COLUMN_COUNT,
+      Math.max(widget.minWidth, preset?.width ?? widget.width),
+    );
+    const height = Math.min(
+      DASHBOARD_MAX_WIDGET_HEIGHT,
+      Math.max(widget.minHeight, preset?.height ?? widget.height),
+    );
+
+    let position = preset
+      ? {
+          x: Math.min(preset.x, DASHBOARD_COLUMN_COUNT - width),
+          y: preset.y,
+        }
+      : null;
+
+    if (position) {
+      const candidate: DashboardWidgetRect = {
+        x: position.x,
+        y: position.y,
+        width,
+        height,
+      };
+
+      if (occupied.some((item) => rectanglesOverlap(candidate, item))) {
+        position = null;
+      }
+    }
+
+    position ??= findFirstAvailableDashboardPosition(occupied, width, height);
+    if (!position) {
+      continue;
+    }
+
+    const item = {
+      id: widget.id,
+      x: position.x,
+      y: position.y,
+      width,
+      height,
+    };
+    layout.push(item);
+    occupied.push(item);
+  }
+
+  return layout;
 }
 
 export function layoutFingerprint(items: readonly DashboardLayoutWidget[]): string {

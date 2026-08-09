@@ -164,6 +164,7 @@ export default async function DashboardPage() {
 
               return {
                 id: widget.id,
+                widgetType: widget.widgetType,
                 title: widget.title,
                 positionX: widget.positionX,
                 positionY: widget.positionY,

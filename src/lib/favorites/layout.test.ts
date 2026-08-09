@@ -5,6 +5,7 @@ import {
   FAVORITES_MAX_ITEMS,
   FAVORITES_MIN_ITEM_HEIGHT,
   FAVORITES_MIN_ITEM_WIDTH,
+  buildDefaultFavoriteLayout,
   favoriteLayoutFingerprint,
   favoritesLayoutPayloadSchema,
   findFirstAvailableFavoriteTilePosition,
@@ -90,6 +91,18 @@ describe("favorites automatic placement", () => {
 
   it("rejects impossible requested dimensions", () => {
     expect(findFirstAvailableFavoriteTilePosition([], 1, 1)).toBeNull();
+  });
+});
+
+describe("favorites default layout", () => {
+  it("restores four default 3x3 tiles per desktop row", () => {
+    expect(buildDefaultFavoriteLayout(["a", "b", "c", "d", "e"])).toEqual([
+      { id: "a", x: 0, y: 0, width: 3, height: 3 },
+      { id: "b", x: 3, y: 0, width: 3, height: 3 },
+      { id: "c", x: 6, y: 0, width: 3, height: 3 },
+      { id: "d", x: 9, y: 0, width: 3, height: 3 },
+      { id: "e", x: 0, y: 3, width: 3, height: 3 },
+    ]);
   });
 });
 
