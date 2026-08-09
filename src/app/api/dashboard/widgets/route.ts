@@ -255,10 +255,7 @@ export async function PATCH(request: Request) {
       };
     });
 
-    return NextResponse.json(
-      { version: 1, ...result },
-      { headers: NO_STORE_HEADERS },
-    );
+    return NextResponse.json({ version: 1, ...result }, { headers: NO_STORE_HEADERS });
   } catch (error) {
     if (error instanceof WidgetAccessError) {
       return NextResponse.json(
