@@ -38,9 +38,9 @@ describe("dashboard widget catalog", () => {
   });
 
   it("returns the requested definition", () => {
-    expect(getDashboardWidgetDefinition("favorites")).toMatchObject({
-      type: "favorites",
-      title: "Favoris",
+    expect(getDashboardWidgetDefinition("monitoring")).toMatchObject({
+      type: "monitoring",
+      title: "Monitoring",
       width: 4,
       height: 2,
     });
@@ -50,7 +50,7 @@ describe("dashboard widget catalog", () => {
     expect(
       dashboardWidgetSelectionPayloadSchema.safeParse({
         dashboardId,
-        type: "clock",
+        type: "monitoring",
       }).success,
     ).toBe(true);
     expect(
@@ -90,6 +90,11 @@ describe("dashboard widget catalog", () => {
       showDocker: true,
       showSession: true,
     });
+    expect(getDefaultDashboardWidgetConfiguration("monitoring")).toEqual({
+      range: "1h",
+      showAlerts: true,
+      showSources: true,
+    });
   });
 
   it("validates settings according to the selected widget type", () => {
@@ -112,18 +117,42 @@ describe("dashboard widget catalog", () => {
         configuration: { limit: 9 },
       }).success,
     ).toBe(false);
+
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "monitoring",
+        configuration: {
+          range: "24h",
+          showAlerts: false,
+          showSources: true,
+        },
+      }).success,
+    ).toBe(true);
+
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "monitoring",
+        configuration: {
+          range: "30d",
+          showAlerts: true,
+          showSources: true,
+        },
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects arbitrary widget configuration keys", () => {
     expect(
       dashboardWidgetSettingsPayloadSchema.safeParse({
         dashboardId,
-        type: "clock",
+        type: "monitoring",
         configuration: {
-          showSeconds: true,
-          showDate: true,
-          hour12: false,
-          script: "alert(1)",
+          range: "1h",
+          showAlerts: true,
+          showSources: true,
+          endpoint: "http://example.test",
         },
       }).success,
     ).toBe(false);
@@ -152,10 +181,15 @@ describe("dashboard widget catalog", () => {
 
   it("falls back to defaults for an invalid stored configuration", () => {
     expect(
-      resolveDashboardWidgetConfiguration("favorites", {
-        limit: 99,
-        legacy: true,
+      resolveDashboardWidgetConfiguration("monitoring", {
+        range: "forever",
+        showAlerts: true,
+        showSources: true,
       }),
-    ).toEqual({ limit: 6 });
+    ).toEqual({
+      range: "1h",
+      showAlerts: true,
+      showSources: true,
+    });
   });
 });
