@@ -10,6 +10,7 @@ import {
   getDashboardWidgetDefinition,
   getDefaultDashboardWidgetConfiguration,
   parseDashboardWidgetConfiguration,
+  resolveDashboardWidgetConfiguration,
 } from "./widget-catalog";
 
 const dashboardId = "11111111-1111-4111-8111-111111111111";
@@ -128,6 +129,17 @@ describe("dashboard widget catalog", () => {
     ).toBe(false);
   });
 
+  it("rejects arbitrary outer settings keys", () => {
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "favorites",
+        configuration: { limit: 4 },
+        url: "https://example.test",
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires at least one system status block", () => {
     expect(() =>
       parseDashboardWidgetConfiguration("system-status", {
@@ -136,5 +148,14 @@ describe("dashboard widget catalog", () => {
         showSession: false,
       }),
     ).toThrow("Au moins un bloc de statut doit rester affiché.");
+  });
+
+  it("falls back to defaults for an invalid stored configuration", () => {
+    expect(
+      resolveDashboardWidgetConfiguration("favorites", {
+        limit: 99,
+        legacy: true,
+      }),
+    ).toEqual({ limit: 6 });
   });
 });
