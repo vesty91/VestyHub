@@ -1,9 +1,10 @@
 "use client";
 
-import { Eye, EyeOff, Plus, Settings2 } from "lucide-react";
+import { Eye, EyeOff, Plus, Settings2, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { DashboardWidgetSettingsEditor } from "@/components/dashboard/dashboard-widget-settings-editor";
 import { Button } from "@/components/ui/button";
 import {
   DASHBOARD_WIDGET_CATALOG,
@@ -13,6 +14,7 @@ import {
 type DashboardWidgetState = {
   type: string;
   isVisible: boolean;
+  configuration: unknown;
 };
 
 type DashboardWidgetManagerProps = {
@@ -26,14 +28,16 @@ export function DashboardWidgetManager({
 }: DashboardWidgetManagerProps) {
   const router = useRouter();
   const [pendingType, setPendingType] = useState<DashboardWidgetType | null>(null);
+  const [settingsType, setSettingsType] = useState<DashboardWidgetType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const widgetStateByType = useMemo(
-    () => new Map(widgets.map((widget) => [widget.type, widget.isVisible])),
+    () => new Map(widgets.map((widget) => [widget.type, widget])),
     [widgets],
   );
 
   async function changeWidget(type: DashboardWidgetType) {
-    const isVisible = widgetStateByType.get(type) === true;
+    const storedWidget = widgetStateByType.get(type);
+    const isVisible = storedWidget?.isVisible === true;
 
     setPendingType(type);
     setError(null);
@@ -55,6 +59,9 @@ export function DashboardWidgetManager({
         throw new Error(payload?.error ?? `Mutation refusée (${response.status}).`);
       }
 
+      if (settingsType === type) {
+        setSettingsType(null);
+      }
       router.refresh();
     } catch (caughtError) {
       setError(
@@ -76,13 +83,13 @@ export function DashboardWidgetManager({
             Gérer les widgets
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
-            Affiche, masque ou réactive les widgets du catalogue VestyHub.
+            Affiche, masque, réactive ou configure les widgets du catalogue VestyHub.
           </p>
         </div>
         <span className="text-muted-foreground text-xs">
           {
             DASHBOARD_WIDGET_CATALOG.filter(
-              (widget) => widgetStateByType.get(widget.type) === true,
+              (widget) => widgetStateByType.get(widget.type)?.isVisible === true,
             ).length
           }
           /{DASHBOARD_WIDGET_CATALOG.length} affichés
@@ -91,10 +98,11 @@ export function DashboardWidgetManager({
 
       <div className="mt-3 grid gap-2 md:grid-cols-3">
         {DASHBOARD_WIDGET_CATALOG.map((widget) => {
-          const storedVisibility = widgetStateByType.get(widget.type);
-          const isStored = storedVisibility !== undefined;
-          const isVisible = storedVisibility === true;
+          const storedWidget = widgetStateByType.get(widget.type);
+          const isStored = storedWidget !== undefined;
+          const isVisible = storedWidget?.isVisible === true;
           const isPending = pendingType === widget.type;
+          const isConfiguring = settingsType === widget.type;
           const statusLabel = isVisible ? "Affiché" : isStored ? "Masqué" : "Disponible";
           const actionLabel = isPending
             ? "Mise à jour…"
@@ -128,17 +136,49 @@ export function DashboardWidgetManager({
                 </span>
               </div>
 
-              <Button
-                type="button"
-                variant={isVisible ? "outline" : "default"}
-                size="sm"
-                className="mt-auto self-start"
-                disabled={pendingType !== null}
-                onClick={() => void changeWidget(widget.type)}
-              >
-                <ActionIcon aria-hidden="true" />
-                {actionLabel}
-              </Button>
+              <div className="mt-auto flex flex-wrap gap-2 pt-3">
+                <Button
+                  type="button"
+                  variant={isVisible ? "outline" : "default"}
+                  size="sm"
+                  disabled={pendingType !== null}
+                  onClick={() => void changeWidget(widget.type)}
+                >
+                  <ActionIcon aria-hidden="true" />
+                  {actionLabel}
+                </Button>
+
+                {isStored ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pendingType !== null}
+                    onClick={() =>
+                      setSettingsType((current) =>
+                        current === widget.type ? null : widget.type,
+                      )
+                    }
+                  >
+                    <SlidersHorizontal aria-hidden="true" />
+                    {isConfiguring ? "Fermer" : "Configurer"}
+                  </Button>
+                ) : null}
+              </div>
+
+              {isConfiguring && storedWidget ? (
+                <DashboardWidgetSettingsEditor
+                  key={`settings-${widget.type}`}
+                  dashboardId={dashboardId}
+                  type={widget.type}
+                  configuration={storedWidget.configuration}
+                  onSaved={() => {
+                    setSettingsType(null);
+                    router.refresh();
+                  }}
+                  onCancel={() => setSettingsType(null)}
+                />
+              ) : null}
             </div>
           );
         })}
