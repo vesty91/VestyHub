@@ -1,0 +1,52 @@
+groups:
+  - name: vestyhub.infrastructure
+    rules:
+      - alert: VestyHubTargetDown
+        expr: up{job=~"node-exporter|cadvisor|alloy|snmp-exporter"} == 0
+        for: 3m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "Cible Prometheus indisponible"
+          description: "{{ $labels.job }} / {{ $labels.instance }} est DOWN depuis plus de 3 minutes."
+
+      - alert: SynologyMonitoringDown
+        expr: up{job="synology-snmp"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Supervision Synology indisponible"
+          description: "La cible Synology SNMP {{ $labels.instance }} est DOWN depuis plus de 3 minutes."
+
+      - alert: HostHighCpuUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{job="node-exporter",mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "CPU élevé"
+          description: "L'utilisation CPU de {{ $labels.instance }} dépasse 90 % depuis plus de 10 minutes."
+
+      - alert: HostHighMemoryUsage
+        expr: 100 * (1 - (node_memory_MemAvailable_bytes{job="node-exporter"} / node_memory_MemTotal_bytes{job="node-exporter"})) > 90
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "RAM élevée"
+          description: "L'utilisation mémoire de {{ $labels.instance }} dépasse 90 % depuis plus de 10 minutes."
+
+      - alert: HostDiskSpaceCritical
+        expr: 100 * (1 - (node_filesystem_avail_bytes{job="node-exporter",mountpoint="/volume1"} / node_filesystem_size_bytes{job="node-exporter",mountpoint="/volume1"})) > 95
+        for: 10m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "Espace disque critique"
+          description: "Le filesystem {{ $labels.mountpoint }} de {{ $labels.instance }} dépasse 95 % d'utilisation depuis plus de 10 minutes."
