@@ -163,9 +163,11 @@ export default async function DashboardPage() {
               configuration: widget.configuration,
             }))}
             widgets={visibleWidgets.map((widget) => {
-              const contentMinHeight = ["favorites", "system-status", "monitoring"].includes(
-                widget.widgetType,
-              )
+              const contentMinHeight = [
+                "favorites",
+                "system-status",
+                "monitoring",
+              ].includes(widget.widgetType)
                 ? 2
                 : 1;
               const minHeight = Math.max(widget.minHeight, contentMinHeight);

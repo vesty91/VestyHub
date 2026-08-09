@@ -45,7 +45,9 @@ export function MonitoringWidget({
         } | null;
 
         if (!response.ok || !payload?.data) {
-          throw new Error(payload?.error ?? `Monitoring indisponible (${response.status}).`);
+          throw new Error(
+            payload?.error ?? `Monitoring indisponible (${response.status}).`,
+          );
         }
 
         if (active) {
@@ -53,7 +55,10 @@ export function MonitoringWidget({
           setError(null);
         }
       } catch (caughtError) {
-        if (!active || (caughtError instanceof DOMException && caughtError.name === "AbortError")) {
+        if (
+          !active ||
+          (caughtError instanceof DOMException && caughtError.name === "AbortError")
+        ) {
           return;
         }
         setError(
@@ -111,10 +116,7 @@ export function MonitoringWidget({
             <Metric label="CPU" value={formatPercent(summary?.cpuPercent)} />
             <Metric label="RAM" value={formatPercent(summary?.memoryPercent)} />
             <Metric label="Stockage" value={formatPercent(summary?.filesystemPercent)} />
-            <Metric
-              label="Conteneurs"
-              value={formatCount(summary?.runningContainers)}
-            />
+            <Metric label="Conteneurs" value={formatCount(summary?.runningContainers)} />
           </div>
 
           {configuration.showAlerts ? (
