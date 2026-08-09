@@ -3,43 +3,33 @@ logging {
   format = "logfmt"
 }
 
-local.file_match "docker_json_logs" {
-  path_targets = [{
-    __path__ = "/var/lib/docker/containers/*/*-json.log",
-    job      = "docker",
-  }]
+discovery.docker "containers" {
+  host             = "http://docker-socket-proxy:2375"
+  refresh_interval = "15s"
 }
 
-loki.source.file "docker_json_logs" {
-  targets    = local.file_match.docker_json_logs.targets
-  forward_to = [loki.process.docker_json_logs.receiver]
+discovery.relabel "docker_logs" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
 }
 
-loki.process "docker_json_logs" {
-  stage.json {
-    expressions = {
-      output = "log",
-      stream = "stream",
-      time   = "time",
-    }
-  }
-
-  stage.labels {
-    values = {
-      stream = "",
-    }
-  }
-
-  stage.timestamp {
-    source = "time"
-    format = "RFC3339Nano"
-  }
-
-  stage.output {
-    source = "output"
-  }
-
-  forward_to = [loki.write.local.receiver]
+loki.source.docker "docker_logs" {
+  host             = "http://docker-socket-proxy:2375"
+  targets          = discovery.docker.containers.targets
+  labels           = { job = "docker" }
+  relabel_rules    = discovery.relabel.docker_logs.rules
+  refresh_interval = "15s"
+  forward_to       = [loki.write.local.receiver]
 }
 
 loki.write "local" {
