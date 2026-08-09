@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-export const DASHBOARD_WIDGET_TYPES = ["clock", "favorites", "system-status"] as const;
+export const DASHBOARD_WIDGET_TYPES = [
+  "clock",
+  "favorites",
+  "system-status",
+] as const;
 
 export const dashboardWidgetTypeSchema = z.enum(DASHBOARD_WIDGET_TYPES);
 
@@ -37,38 +41,52 @@ export const systemStatusWidgetConfigurationSchema = z
   .strict()
   .refine(
     (configuration) =>
-      configuration.showDatabase || configuration.showDocker || configuration.showSession,
+      configuration.showDatabase ||
+      configuration.showDocker ||
+      configuration.showSession,
     {
       message: "Au moins un bloc de statut doit rester affiché.",
     },
   );
 
 export const dashboardWidgetSettingsPayloadSchema = z.discriminatedUnion("type", [
-  z.object({
-    dashboardId: z.string().uuid(),
-    type: z.literal("clock"),
-    configuration: clockWidgetConfigurationSchema,
-  }),
-  z.object({
-    dashboardId: z.string().uuid(),
-    type: z.literal("favorites"),
-    configuration: favoritesWidgetConfigurationSchema,
-  }),
-  z.object({
-    dashboardId: z.string().uuid(),
-    type: z.literal("system-status"),
-    configuration: systemStatusWidgetConfigurationSchema,
-  }),
+  z
+    .object({
+      dashboardId: z.string().uuid(),
+      type: z.literal("clock"),
+      configuration: clockWidgetConfigurationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      dashboardId: z.string().uuid(),
+      type: z.literal("favorites"),
+      configuration: favoritesWidgetConfigurationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      dashboardId: z.string().uuid(),
+      type: z.literal("system-status"),
+      configuration: systemStatusWidgetConfigurationSchema,
+    })
+    .strict(),
 ]);
 
 export type DashboardWidgetType = z.infer<typeof dashboardWidgetTypeSchema>;
-export type ClockWidgetConfiguration = z.infer<typeof clockWidgetConfigurationSchema>;
+export type ClockWidgetConfiguration = z.infer<
+  typeof clockWidgetConfigurationSchema
+>;
 export type FavoritesWidgetConfiguration = z.infer<
   typeof favoritesWidgetConfigurationSchema
 >;
 export type SystemStatusWidgetConfiguration = z.infer<
   typeof systemStatusWidgetConfigurationSchema
 >;
+export type DashboardWidgetConfiguration =
+  | ClockWidgetConfiguration
+  | FavoritesWidgetConfiguration
+  | SystemStatusWidgetConfiguration;
 
 export type DashboardWidgetConfigurationByType = {
   clock: ClockWidgetConfiguration;
@@ -140,7 +158,9 @@ export function parseDashboardWidgetConfiguration<T extends DashboardWidgetType>
 ): DashboardWidgetConfigurationByType[T] {
   switch (type) {
     case "clock":
-      return clockWidgetConfigurationSchema.parse(configuration) as DashboardWidgetConfigurationByType[T];
+      return clockWidgetConfigurationSchema.parse(
+        configuration,
+      ) as DashboardWidgetConfigurationByType[T];
     case "favorites":
       return favoritesWidgetConfigurationSchema.parse(
         configuration,
@@ -152,8 +172,21 @@ export function parseDashboardWidgetConfiguration<T extends DashboardWidgetType>
   }
 }
 
-export function getDefaultDashboardWidgetConfiguration<T extends DashboardWidgetType>(
-  type: T,
-): DashboardWidgetConfigurationByType[T] {
+export function getDefaultDashboardWidgetConfiguration<
+  T extends DashboardWidgetType,
+>(type: T): DashboardWidgetConfigurationByType[T] {
   return parseDashboardWidgetConfiguration(type, {});
+}
+
+export function resolveDashboardWidgetConfiguration<
+  T extends DashboardWidgetType,
+>(
+  type: T,
+  configuration: unknown,
+): DashboardWidgetConfigurationByType[T] {
+  try {
+    return parseDashboardWidgetConfiguration(type, configuration);
+  } catch {
+    return getDefaultDashboardWidgetConfiguration(type);
+  }
 }
