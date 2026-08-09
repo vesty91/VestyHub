@@ -40,6 +40,7 @@ type DashboardGridWidget = {
 type DashboardWidgetState = {
   type: string;
   isVisible: boolean;
+  configuration: unknown;
 };
 
 type GridStackDashboardProps = {

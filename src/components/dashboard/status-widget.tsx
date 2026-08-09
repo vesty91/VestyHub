@@ -1,34 +1,43 @@
 import { Activity, Container, Database, ShieldCheck } from "lucide-react";
 
 import type { DockerOverview } from "@/connectors/docker/types";
+import type { SystemStatusWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
 
 export function StatusWidget({
   docker,
   databaseReady,
+  configuration,
 }: {
   docker: DockerOverview;
   databaseReady: boolean;
+  configuration: SystemStatusWidgetConfiguration;
 }) {
   const checks = [
-    {
-      label: "PostgreSQL",
-      detail: databaseReady ? "Opérationnel" : "Indisponible",
-      healthy: databaseReady,
-      icon: Database,
-    },
-    {
-      label: "Docker proxy",
-      detail: docker.available ? "Lecture seule" : "Non joignable",
-      healthy: docker.available,
-      icon: Container,
-    },
-    {
-      label: "Session",
-      detail: "Protégée",
-      healthy: true,
-      icon: ShieldCheck,
-    },
-  ];
+    configuration.showDatabase
+      ? {
+          label: "PostgreSQL",
+          detail: databaseReady ? "Opérationnel" : "Indisponible",
+          healthy: databaseReady,
+          icon: Database,
+        }
+      : null,
+    configuration.showDocker
+      ? {
+          label: "Docker proxy",
+          detail: docker.available ? "Lecture seule" : "Non joignable",
+          healthy: docker.available,
+          icon: Container,
+        }
+      : null,
+    configuration.showSession
+      ? {
+          label: "Session",
+          detail: "Protégée",
+          healthy: true,
+          icon: ShieldCheck,
+        }
+      : null,
+  ].filter((check) => check !== null);
 
   return (
     <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5">

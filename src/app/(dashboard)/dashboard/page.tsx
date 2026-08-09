@@ -24,6 +24,7 @@ import {
   favorites,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
+import { resolveDashboardWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,7 @@ export default async function DashboardPage() {
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
               <span className="bg-success size-1.5 rounded-full" />
-              Phase 3F · v0.3.0
+              Phase 3J · v0.3.0
             </Badge>
             <span className="text-muted-foreground text-xs">
               Dashboard personnalisable
@@ -158,6 +159,7 @@ export default async function DashboardPage() {
             widgetStates={widgets.map((widget) => ({
               type: widget.widgetType,
               isVisible: widget.isVisible,
+              configuration: widget.configuration,
             }))}
             widgets={visibleWidgets.map((widget) => {
               const contentMinHeight = ["favorites", "system-status"].includes(
@@ -182,12 +184,32 @@ export default async function DashboardPage() {
           >
             {visibleWidgets.map((widget) => (
               <div key={widget.id} className="h-full">
-                {widget.widgetType === "clock" ? <ClockWidget /> : null}
+                {widget.widgetType === "clock" ? (
+                  <ClockWidget
+                    configuration={resolveDashboardWidgetConfiguration(
+                      "clock",
+                      widget.configuration,
+                    )}
+                  />
+                ) : null}
                 {widget.widgetType === "favorites" ? (
-                  <FavoritesWidget favorites={pinnedFavorites} />
+                  <FavoritesWidget
+                    favorites={pinnedFavorites}
+                    configuration={resolveDashboardWidgetConfiguration(
+                      "favorites",
+                      widget.configuration,
+                    )}
+                  />
                 ) : null}
                 {widget.widgetType === "system-status" ? (
-                  <StatusWidget docker={docker} databaseReady />
+                  <StatusWidget
+                    docker={docker}
+                    databaseReady
+                    configuration={resolveDashboardWidgetConfiguration(
+                      "system-status",
+                      widget.configuration,
+                    )}
+                  />
                 ) : null}
                 {!["clock", "favorites", "system-status"].includes(widget.widgetType) ? (
                   <Panel className="h-full">

@@ -4,9 +4,13 @@ import {
   DASHBOARD_WIDGET_CATALOG,
   DASHBOARD_WIDGET_TYPES,
   dashboardWidgetSelectionPayloadSchema,
+  dashboardWidgetSettingsPayloadSchema,
   dashboardWidgetTypeSchema,
   dashboardWidgetVisibilityPayloadSchema,
   getDashboardWidgetDefinition,
+  getDefaultDashboardWidgetConfiguration,
+  parseDashboardWidgetConfiguration,
+  resolveDashboardWidgetConfiguration,
 } from "./widget-catalog";
 
 const dashboardId = "11111111-1111-4111-8111-111111111111";
@@ -72,5 +76,86 @@ describe("dashboard widget catalog", () => {
         isVisible: "false",
       }).success,
     ).toBe(false);
+  });
+
+  it("hydrates safe defaults from an empty stored configuration", () => {
+    expect(getDefaultDashboardWidgetConfiguration("clock")).toEqual({
+      showSeconds: true,
+      showDate: true,
+      hour12: false,
+    });
+    expect(getDefaultDashboardWidgetConfiguration("favorites")).toEqual({ limit: 6 });
+    expect(getDefaultDashboardWidgetConfiguration("system-status")).toEqual({
+      showDatabase: true,
+      showDocker: true,
+      showSession: true,
+    });
+  });
+
+  it("validates settings according to the selected widget type", () => {
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "clock",
+        configuration: {
+          showSeconds: false,
+          showDate: true,
+          hour12: false,
+        },
+      }).success,
+    ).toBe(true);
+
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "favorites",
+        configuration: { limit: 9 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects arbitrary widget configuration keys", () => {
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "clock",
+        configuration: {
+          showSeconds: true,
+          showDate: true,
+          hour12: false,
+          script: "alert(1)",
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects arbitrary outer settings keys", () => {
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "favorites",
+        configuration: { limit: 4 },
+        url: "https://example.test",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires at least one system status block", () => {
+    expect(() =>
+      parseDashboardWidgetConfiguration("system-status", {
+        showDatabase: false,
+        showDocker: false,
+        showSession: false,
+      }),
+    ).toThrow("Au moins un bloc de statut doit rester affiché.");
+  });
+
+  it("falls back to defaults for an invalid stored configuration", () => {
+    expect(
+      resolveDashboardWidgetConfiguration("favorites", {
+        limit: 99,
+        legacy: true,
+      }),
+    ).toEqual({ limit: 6 });
   });
 });

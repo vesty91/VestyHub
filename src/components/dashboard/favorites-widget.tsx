@@ -1,10 +1,19 @@
-import Link from "next/link";
 import { ArrowUpRight, Star } from "lucide-react";
+import Link from "next/link";
 
 import { ServiceIcon } from "@/components/icons/service-icon";
 import type { Favorite } from "@/db/schema";
+import type { FavoritesWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
 
-export function FavoritesWidget({ favorites }: { favorites: Favorite[] }) {
+export function FavoritesWidget({
+  favorites,
+  configuration,
+}: {
+  favorites: Favorite[];
+  configuration: FavoritesWidgetConfiguration;
+}) {
+  const displayedFavorites = favorites.slice(0, configuration.limit);
+
   return (
     <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5">
       <div className="mb-4 flex items-center justify-between pr-10">
@@ -29,7 +38,7 @@ export function FavoritesWidget({ favorites }: { favorites: Favorite[] }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {favorites.slice(0, 6).map((favorite) => {
+          {displayedFavorites.map((favorite) => {
             const url = favorite.internalUrl || favorite.externalUrl;
             const content = (
               <>
