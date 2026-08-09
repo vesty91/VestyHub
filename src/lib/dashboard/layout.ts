@@ -67,7 +67,7 @@ export type DashboardDefaultLayoutInput = {
   minHeight: number;
 };
 
-type DashboardWidgetRect = {
+export type DashboardWidgetRect = {
   x: number;
   y: number;
   width: number;
@@ -122,6 +122,25 @@ function findFirstAvailableDashboardPosition(
   }
 
   return null;
+}
+
+export function findDashboardWidgetPlacement(
+  items: readonly DashboardWidgetRect[],
+  width: number,
+  height: number,
+): { x: number; y: number } | null {
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 1 ||
+    width > DASHBOARD_COLUMN_COUNT ||
+    height < 1 ||
+    height > DASHBOARD_MAX_WIDGET_HEIGHT
+  ) {
+    return null;
+  }
+
+  return findFirstAvailableDashboardPosition(items, width, height);
 }
 
 export function normalizeGridLayout(
@@ -192,7 +211,7 @@ export function buildDefaultDashboardLayout(
       }
     }
 
-    position ??= findFirstAvailableDashboardPosition(occupied, width, height);
+    position ??= findDashboardWidgetPlacement(occupied, width, height);
     if (!position) {
       continue;
     }
