@@ -60,7 +60,10 @@ export async function POST(request: Request) {
       }
 
       const [existingWidget] = await tx
-        .select({ id: dashboardWidgets.id, isVisible: dashboardWidgets.isVisible })
+        .select({
+          id: dashboardWidgets.id,
+          isVisible: dashboardWidgets.isVisible,
+        })
         .from(dashboardWidgets)
         .where(
           and(
@@ -216,7 +219,10 @@ export async function PATCH(request: Request) {
       }
 
       const [storedWidget] = await tx
-        .select({ id: dashboardWidgets.id, isVisible: dashboardWidgets.isVisible })
+        .select({
+          id: dashboardWidgets.id,
+          isVisible: dashboardWidgets.isVisible,
+        })
         .from(dashboardWidgets)
         .where(
           and(
