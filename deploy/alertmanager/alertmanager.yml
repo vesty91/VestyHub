@@ -2,11 +2,20 @@ global:
   resolve_timeout: 5m
 
 route:
-  receiver: "null"
+  receiver: "ntfy"
   group_by: ["alertname", "instance", "severity"]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
 
 receivers:
-  - name: "null"
+  - name: "ntfy"
+    webhook_configs:
+      - url: "https://ntfy.sh/"
+        send_resolved: true
+        timeout: 10s
+        payload:
+          topic: '{{ if eq .Status "firing" }}vestyhub-alerts-alertmanager{{ else }}vestyhub-alerts-alertmanager-ok{{ end }}'
+          title: '{{ if eq .Status "firing" }}VestyHub - PROBLEME{{ else }}VestyHub - RESOLU{{ end }} - {{ .CommonLabels.alertname }}'
+          message: >-
+            {{ .CommonAnnotations.summary }}{{ if .CommonAnnotations.description }} - {{ .CommonAnnotations.description }}{{ end }}{{ if .CommonLabels.instance }} | Instance: {{ .CommonLabels.instance }}{{ end }}{{ if .CommonLabels.severity }} | Severite: {{ .CommonLabels.severity }}{{ end }}
