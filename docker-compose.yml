@@ -311,9 +311,39 @@ services:
       - --storage.path=/alertmanager
     volumes:
       - ./deploy/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${NTFY_ALERTMANAGER_TOKEN_FILE:-./secrets/ntfy-alertmanager.runtime.token}:/run/secrets/ntfy-alertmanager.token:ro
       - alertmanager_data:/alertmanager
     networks:
       - backend
+    security_opt:
+      - no-new-privileges:true
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.26.3
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command: ["serve"]
+    environment:
+      TZ: Europe/Paris
+    ports:
+      - "127.0.0.1:${NTFY_PORT:-8093}:80"
+    volumes:
+      - ./deploy/ntfy/server.yml:/etc/ntfy/server.yml:ro
+      - ntfy_data:/var/lib/ntfy
+    networks:
+      - backend
+      - monitoring-egress
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    init: true
     security_opt:
       - no-new-privileges:true
 
@@ -329,3 +359,4 @@ volumes:
   loki_data:
   alloy_data:
   alertmanager_data:
+  ntfy_data:

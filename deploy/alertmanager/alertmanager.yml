@@ -11,9 +11,13 @@ route:
 receivers:
   - name: "ntfy"
     webhook_configs:
-      - url: "https://ntfy.sh/"
+      - url: "http://ntfy:80/"
         send_resolved: true
         timeout: 10s
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /run/secrets/ntfy-alertmanager.token
         payload:
           topic: '{{ if eq .Status "firing" }}vestyhub-alerts-alertmanager{{ else }}vestyhub-alerts-alertmanager-ok{{ end }}'
           title: '{{ if eq .Status "firing" }}VestyHub - PROBLEME{{ else }}VestyHub - RESOLU{{ end }} - {{ .CommonLabels.alertname }}'
