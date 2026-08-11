@@ -74,8 +74,7 @@ services:
         condition: service_started
         required: true
     env_file:
-      - path: .env
-        required: true
+      - .env
     image: vestyhub:phase3k-nas
     networks:
       default: null
@@ -151,8 +150,7 @@ services:
         condition: service_started
         required: true
     env_file:
-      - path: .env
-        required: true
+      - .env
     image: vestyhub-tools:phase3g-nas
     networks:
       default: null
@@ -225,8 +223,7 @@ services:
         volume: {}
   postgres:
     env_file:
-      - path: .env
-        required: true
+      - .env
     image: postgres:17.10-alpine
     networks:
       default: null
@@ -282,8 +279,7 @@ services:
         condition: service_started
         required: true
     env_file:
-      - path: .env
-        required: true
+      - .env
     image: vestyhub-tools:phase3g-nas
     networks:
       default: null
@@ -294,8 +290,7 @@ services:
       - --config.file=/etc/snmp_exporter/auth.yml
       - --config.expand-environment-variables
     env_file:
-      - path: .env
-        required: true
+      - .env
     image: prom/snmp-exporter:v0.30.1
     networks:
       default: null
