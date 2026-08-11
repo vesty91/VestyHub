@@ -1,0 +1,322 @@
+name: vestyhub-nas-deploy
+networks:
+  default:
+    name: vestyhub-nas-deploy_default
+  docker_proxy:
+    external: true
+    name: vestyhub-docker-proxy_default
+services:
+  alertmanager:
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    image: prom/alertmanager:v0.33.1
+    networks:
+      default: null
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/alertmanager/alertmanager.yml
+        target: /etc/alertmanager/alertmanager.yml
+        type: bind
+      - source: alertmanager_data
+        target: /alertmanager
+        type: volume
+        volume: {}
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./secrets/ntfy-alertmanager.runtime.token
+        target: /run/secrets/ntfy-alertmanager.token
+        type: bind
+  alloy:
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    depends_on:
+      loki:
+        condition: service_started
+        required: true
+    image: grafana/alloy:v1.18.0
+    networks:
+      default: null
+      docker_proxy: null
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/alloy/config.alloy
+        target: /etc/alloy/config.alloy
+        type: bind
+      - source: alloy_data
+        target: /var/lib/alloy/data
+        type: volume
+        volume: {}
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    depends_on:
+      migrate:
+        condition: service_started
+        required: true
+      postgres:
+        condition: service_started
+        required: true
+    env_file:
+      - path: .env
+        required: true
+    image: vestyhub:phase3k-nas
+    networks:
+      default: null
+      docker_proxy: null
+    ports:
+      - host_ip: 0.0.0.0
+        mode: ingress
+        protocol: tcp
+        published: "3001"
+        target: 3000
+    restart: unless-stopped
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    networks:
+      default: null
+    privileged: true
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /
+        target: /rootfs
+        type: bind
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /var/run
+        target: /var/run
+        type: bind
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /sys
+        target: /sys
+        type: bind
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /volume1/@docker
+        target: /volume1/@docker
+        type: bind
+  loki:
+    command:
+      - -config.file=/etc/loki/config.yml
+    image: grafana/loki:3.7.4
+    networks:
+      default: null
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/loki/config.yml
+        target: /etc/loki/config.yml
+        type: bind
+      - source: loki_data
+        target: /loki
+        type: volume
+        volume: {}
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    command:
+      - ./node_modules/.bin/tsx
+      - src/db/migrate.ts
+    depends_on:
+      postgres:
+        condition: service_started
+        required: true
+    env_file:
+      - path: .env
+        required: true
+    image: vestyhub-tools:phase3g-nas
+    networks:
+      default: null
+    restart: "no"
+  node-exporter:
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+    image: quay.io/prometheus/node-exporter:v1.11.1
+    networks:
+      default: null
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /proc
+        target: /host/proc
+        type: bind
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /sys
+        target: /host/sys
+        type: bind
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /
+        target: /rootfs
+        type: bind
+  ntfy:
+    command:
+      - serve
+    environment:
+      TZ: Europe/Paris
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '"healthy"\s*:\s*true' || exit 1
+      timeout: 10s
+    image: binwiederhier/ntfy:v2.26.3
+    init: true
+    networks:
+      default: null
+    ports:
+      - host_ip: 127.0.0.1
+        mode: ingress
+        protocol: tcp
+        published: "8093"
+        target: 80
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/ntfy/server.yml
+        target: /etc/ntfy/server.yml
+        type: bind
+      - source: ntfy_data
+        target: /var/lib/ntfy
+        type: volume
+        volume: {}
+  postgres:
+    env_file:
+      - path: .env
+        required: true
+    image: postgres:17.10-alpine
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - source: postgres_data
+        target: /var/lib/postgresql/data
+        type: volume
+        volume: {}
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+    depends_on:
+      snmp-exporter:
+        condition: service_started
+        required: true
+    image: prom/prometheus:v3.13.2
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/prometheus/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        type: bind
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/prometheus/alerts.yml
+        target: /etc/prometheus/alerts.yml
+        type: bind
+      - source: prometheus_data
+        target: /prometheus
+        type: volume
+        volume: {}
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    command:
+      - ./node_modules/.bin/tsx
+      - src/db/seed.ts
+    depends_on:
+      migrate:
+        condition: service_started
+        required: true
+      postgres:
+        condition: service_started
+        required: true
+    env_file:
+      - path: .env
+        required: true
+    image: vestyhub-tools:phase3g-nas
+    networks:
+      default: null
+    restart: "no"
+  snmp-exporter:
+    command:
+      - --config.file=/etc/snmp_exporter/snmp.yml
+      - --config.file=/etc/snmp_exporter/auth.yml
+      - --config.expand-environment-variables
+    env_file:
+      - path: .env
+        required: true
+    image: prom/snmp-exporter:v0.30.1
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: ./deploy/snmp-exporter/auth.yml
+        target: /etc/snmp_exporter/auth.yml
+        type: bind
+volumes:
+  alertmanager_data:
+    name: vestyhub-nas-deploy_alertmanager_data
+  alloy_data:
+    name: vestyhub-nas-deploy_alloy_data
+  loki_data:
+    name: vestyhub-nas-deploy_loki_data
+  ntfy_data:
+    name: vestyhub-nas-deploy_ntfy_data
+  postgres_data:
+    name: vestyhub-nas-deploy_postgres_data
+  prometheus_data:
+    name: vestyhub-nas-deploy_prometheus_data
