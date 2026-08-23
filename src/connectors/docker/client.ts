@@ -6,6 +6,11 @@ import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 
 import { calculateCpuPercent, calculateMemoryMetrics } from "./metrics";
+import {
+  dockerActionPath,
+  isProtectedVestyHubContainer,
+  type DockerContainerAction,
+} from "./control";
 import type {
   DockerContainer,
   DockerContainerState,
@@ -122,6 +127,12 @@ function dockerUrl(path: string): URL | null {
   return new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
 }
 
+function dockerControlUrl(path: string): URL | null {
+  const baseUrl = getEnv().DOCKER_CONTROL_PROXY_URL;
+  if (!baseUrl) return null;
+  return new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
+}
+
 async function dockerGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   const url = dockerUrl(path);
   if (!url) throw new Error("Docker proxy is not configured.");
@@ -135,6 +146,23 @@ async function dockerGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
 
   if (!response.ok) throw new Error(`Docker API returned HTTP ${response.status}.`);
   return schema.parse(await response.json());
+}
+
+async function dockerPost(path: string): Promise<void> {
+  const url = dockerControlUrl(path);
+  if (!url) throw new Error("Docker control proxy is not configured.");
+
+  const response = await fetchWithTimeout(url, {
+    method: "POST",
+    timeoutMs: 15_000,
+    connectorName: "Docker NAS",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok && response.status !== 304) {
+    throw new Error(`Docker API returned HTTP ${response.status}.`);
+  }
 }
 
 function normalizeState(value: string): DockerContainerState {
@@ -360,4 +388,33 @@ async function loadDockerOverview(): Promise<DockerOverview> {
 
 export async function getDockerOverview(): Promise<DockerOverview> {
   return overviewCache.getOrSet("nas-overview", loadDockerOverview);
+}
+
+export async function controlDockerContainer(
+  containerId: string,
+  action: DockerContainerAction,
+): Promise<void> {
+  if (!getEnv().DOCKER_CONTROL_ENABLED) {
+    throw new Error("Docker control is disabled.");
+  }
+
+  const containers = await dockerGet(
+    "containers/json?all=1",
+    z.array(dockerContainerSchema),
+  );
+  const target = containers.find((container) => container.Id.startsWith(containerId));
+  if (!target) throw new Error("Docker container not found.");
+
+  const inspect = await dockerGet(
+    `containers/${encodeURIComponent(target.Id)}/json`,
+    dockerInspectSchema,
+  );
+  if (isProtectedVestyHubContainer(inspect.Config.Labels)) {
+    throw new Error("Protected VestyHub container.");
+  }
+
+  await dockerPost(dockerActionPath(target.Id, action));
+  overviewCache.invalidate("nas-overview");
+  inspectCache.invalidate(target.Id);
+  statsCache.invalidate(target.Id);
 }

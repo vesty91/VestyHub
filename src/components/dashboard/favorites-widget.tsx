@@ -1,9 +1,13 @@
+"use client";
+
 import { ArrowUpRight, Star } from "lucide-react";
 import Link from "next/link";
 
 import { ServiceIcon } from "@/components/icons/service-icon";
+import { useFavoriteHealth } from "@/components/favorites/use-favorite-health";
 import type { Favorite } from "@/db/schema";
 import type { FavoritesWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
+import { cn } from "@/lib/utils";
 
 export function FavoritesWidget({
   favorites,
@@ -13,6 +17,10 @@ export function FavoritesWidget({
   configuration: FavoritesWidgetConfiguration;
 }) {
   const displayedFavorites = favorites.slice(0, configuration.limit);
+  const healthEnabledIds = displayedFavorites
+    .filter((favorite) => favorite.healthCheckEnabled)
+    .map((favorite) => favorite.id);
+  const { healthById } = useFavoriteHealth(healthEnabledIds);
 
   return (
     <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5">
@@ -40,6 +48,7 @@ export function FavoritesWidget({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {displayedFavorites.map((favorite) => {
             const url = favorite.internalUrl || favorite.externalUrl;
+            const health = healthById[favorite.id];
             const content = (
               <>
                 <div className="grid size-9 place-items-center rounded-xl bg-cyan-300/10 text-cyan-300">
@@ -47,9 +56,23 @@ export function FavoritesWidget({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{favorite.name}</p>
-                  <p className="truncate text-[11px] text-zinc-500">
-                    {favorite.description || "Service homelab"}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {favorite.healthCheckEnabled ? (
+                      <span
+                        className={cn(
+                          "size-1.5 shrink-0 rounded-full",
+                          !health && "bg-muted-foreground animate-pulse",
+                          health?.status === "online" && "bg-success",
+                          health?.status === "degraded" && "bg-warning",
+                          health?.status === "offline" && "bg-destructive",
+                        )}
+                        aria-label={health?.status ?? "checking"}
+                      />
+                    ) : null}
+                    <p className="truncate text-[11px] text-zinc-500">
+                      {favorite.description || "Service homelab"}
+                    </p>
+                  </div>
                 </div>
                 {url ? <ArrowUpRight className="size-3.5 text-zinc-600" /> : null}
               </>

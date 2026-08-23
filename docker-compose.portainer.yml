@@ -1,0 +1,353 @@
+name: vestyhub
+
+x-app-environment: &app-environment
+  NODE_ENV: production
+  APP_NAME: ${APP_NAME:-VestyHub}
+  APP_URL: ${APP_URL:?APP_URL must be configured in .env}
+  APP_PORT: ${APP_PORT:-3000}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY must be configured in .env}
+  AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be configured in .env}
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be configured in .env}
+  AUTH_LOCAL_ENABLED: ${AUTH_LOCAL_ENABLED:-true}
+  AUTHENTIK_ENABLED: ${AUTHENTIK_ENABLED:-false}
+  AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-}
+  AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:-}
+  AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:-}
+  PROMETHEUS_URL: ${PROMETHEUS_URL:-}
+  PROMETHEUS_TIMEOUT_MS: ${PROMETHEUS_TIMEOUT_MS:-5000}
+  LOKI_URL: ${LOKI_URL:-}
+  LOKI_TIMEOUT_MS: ${LOKI_TIMEOUT_MS:-5000}
+  ALERTMANAGER_URL: ${ALERTMANAGER_URL:-}
+  ALERTMANAGER_TIMEOUT_MS: ${ALERTMANAGER_TIMEOUT_MS:-5000}
+  DOCKER_PROXY_URL: ${DOCKER_PROXY_URL:-http://docker-socket-proxy:2375}
+  DOCKER_CONTROL_ENABLED: "false"
+  DOCKER_LOGS_ENABLED: ${DOCKER_LOGS_ENABLED:-true}
+  SYNOLOGY_ENABLED: ${SYNOLOGY_ENABLED:-false}
+  SYNOLOGY_MODE: ${SYNOLOGY_MODE:-hybrid}
+  SYNOLOGY_BASE_URL: ${SYNOLOGY_BASE_URL:-}
+  SYNOLOGY_USERNAME: ${SYNOLOGY_USERNAME:-}
+  SYNOLOGY_PASSWORD: ${SYNOLOGY_PASSWORD:-}
+  SYNOLOGY_TIMEOUT_MS: ${SYNOLOGY_TIMEOUT_MS:-8000}
+  SYNOLOGY_VERIFY_TLS: ${SYNOLOGY_VERIFY_TLS:-true}
+  SYNOLOGY_CA_CERT_PATH: ${SYNOLOGY_CA_CERT_PATH:-}
+  HEALTHCHECK_ALLOWED_HOSTS: ${HEALTHCHECK_ALLOWED_HOSTS:-}
+  HEALTHCHECK_ALLOWED_CIDRS: ${HEALTHCHECK_ALLOWED_CIDRS:-192.168.0.0/16,10.0.0.0/8}
+  DEFAULT_REFRESH_INTERVAL: ${DEFAULT_REFRESH_INTERVAL:-15000}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DEMO_MODE: ${DEMO_MODE:-false}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@vestyhub.local}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+
+x-app-build: &app-build
+  context: .
+  dockerfile: Dockerfile
+
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vestyhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be configured in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-vestyhub}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-vestyhub} -d ${POSTGRES_DB:-vestyhub}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    command: ["./node_modules/.bin/tsx", "src/db/migrate.ts"]
+    restart: "no"
+    environment: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    image: vestyhub:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    restart: unless-stopped
+    environment: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    networks:
+      - frontend
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=128m,uid=1001,gid=1001,mode=0750
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      vestyhub.enable: "false"
+
+  seed:
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    command: ["./node_modules/.bin/tsx", "src/db/seed.ts"]
+    profiles: ["seed"]
+    restart: "no"
+    environment: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.2
+    restart: unless-stopped
+    environment:
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      CONFIGS: "0"
+      CONTAINERS: "1"
+      DISTRIBUTION: "0"
+      EVENTS: "1"
+      EXEC: "0"
+      GRPC: "0"
+      IMAGES: "1"
+      INFO: "1"
+      NETWORKS: "1"
+      NODES: "0"
+      PING: "1"
+      PLUGINS: "0"
+      POST: "0"
+      SECRETS: "0"
+      SERVICES: "0"
+      SESSION: "0"
+      SWARM: "0"
+      SYSTEM: "0"
+      TASKS: "0"
+      VERSION: "1"
+      VOLUMES: "1"
+      ALLOW_START: "0"
+      ALLOW_STOP: "0"
+      ALLOW_RESTARTS: "0"
+      ALLOW_PAUSE: "0"
+      ALLOW_UNPAUSE: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /run:size=8m,mode=0755
+      - /tmp:size=8m,mode=1777
+      - /var/lib/haproxy:size=8m,mode=0755
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2375/_ping | grep -qx OK"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  prometheus:
+    image: prom/prometheus:v3.13.2
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+    volumes:
+      - /volume1/docker/vestyhub/deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /volume1/docker/vestyhub/deploy/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)
+    volumes:
+      - /:/host:ro
+    networks:
+      - backend
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - backend
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  snmp-exporter:
+    image: prom/snmp-exporter:v0.30.1
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/snmp_exporter/snmp.yml
+      - --config.file=/etc/snmp_exporter/auth.yml
+      - --config.expand-environment-variables
+    environment:
+      SNMPV3_USERNAME: ${SNMPV3_USERNAME:-}
+      SNMPV3_AUTH_PASSWORD: ${SNMPV3_AUTH_PASSWORD:-}
+      SNMPV3_PRIV_PASSWORD: ${SNMPV3_PRIV_PASSWORD:-}
+    volumes:
+      - /volume1/docker/vestyhub/deploy/snmp-exporter/auth.yml:/etc/snmp_exporter/auth.yml:ro
+    networks:
+      - backend
+      - monitoring-egress
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  loki:
+    image: grafana/loki:3.7.4
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - /volume1/docker/vestyhub/deploy/loki/config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  alloy:
+    image: grafana/alloy:v1.18.0
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - /volume1/docker/vestyhub/deploy/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      docker-socket-proxy:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  alertmanager:
+    image: prom/alertmanager:v0.33.1
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - /volume1/docker/vestyhub/deploy/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /volume1/docker/vestyhub/secrets/ntfy-alertmanager.runtime.token:/run/secrets/ntfy-alertmanager.token:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.26.3
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command: ["serve"]
+    environment:
+      TZ: Europe/Paris
+    ports:
+      - "127.0.0.1:${NTFY_PORT:-8093}:80"
+    volumes:
+      - /volume1/docker/vestyhub/deploy/ntfy/server.yml:/etc/ntfy/server.yml:ro
+      - ntfy_data:/var/lib/ntfy
+    networks:
+      - backend
+      - monitoring-egress
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    init: true
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  frontend: {}
+  backend:
+    internal: true
+  monitoring-egress: {}
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  loki_data:
+  alloy_data:
+  alertmanager_data:
+  ntfy_data:

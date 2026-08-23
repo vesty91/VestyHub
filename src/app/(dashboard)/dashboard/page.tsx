@@ -3,6 +3,7 @@ import { Activity, Container, LayoutGrid, Plus, ShieldCheck, Star } from "lucide
 import Link from "next/link";
 
 import { ClockWidget } from "@/components/dashboard/clock-widget";
+import { DashboardApplications } from "@/components/dashboard/dashboard-applications";
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
 import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
 import { MonitoringWidget } from "@/components/dashboard/monitoring-widget";
@@ -49,8 +50,34 @@ export default async function DashboardPage() {
             .orderBy(dashboardWidgets.positionY, dashboardWidgets.positionX)
         : Promise.resolve([]),
       db
-        .select()
+        .select({
+          id: favorites.id,
+          userId: favorites.userId,
+          groupId: favorites.groupId,
+          name: favorites.name,
+          description: favorites.description,
+          internalUrl: favorites.internalUrl,
+          externalUrl: favorites.externalUrl,
+          iconType: favorites.iconType,
+          iconValue: favorites.iconValue,
+          tags: favorites.tags,
+          openMode: favorites.openMode,
+          healthCheckEnabled: favorites.healthCheckEnabled,
+          healthCheckUrl: favorites.healthCheckUrl,
+          dockerContainerId: favorites.dockerContainerId,
+          connectorId: favorites.connectorId,
+          sortOrder: favorites.sortOrder,
+          isFavorite: favorites.isFavorite,
+          positionX: favorites.positionX,
+          positionY: favorites.positionY,
+          width: favorites.width,
+          height: favorites.height,
+          createdAt: favorites.createdAt,
+          updatedAt: favorites.updatedAt,
+          groupName: favoriteGroups.name,
+        })
         .from(favorites)
+        .leftJoin(favoriteGroups, eq(favorites.groupId, favoriteGroups.id))
         .where(and(eq(favorites.userId, user.id), eq(favorites.isFavorite, true)))
         .orderBy(favorites.sortOrder)
         .limit(8),
@@ -132,7 +159,7 @@ export default async function DashboardPage() {
             className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition"
           >
             <Plus className="size-4" />
-            Ajouter un favori
+            Ajouter une application
           </Link>
         }
       />
@@ -141,6 +168,26 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
+      </section>
+
+      <section className="space-y-3" aria-labelledby="applications-title">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="applications-title" className="text-lg font-semibold">
+              Applications
+            </h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Tes services épinglés, disponibles directement depuis le dashboard.
+            </p>
+          </div>
+          <Link href="/favorites" className="text-primary text-sm hover:underline">
+            Gérer les applications
+          </Link>
+        </div>
+        <DashboardApplications
+          items={pinnedFavorites}
+          canEdit={user.role === "ADMIN" || user.role === "USER"}
+        />
       </section>
 
       <section aria-label="Widgets personnalisables">

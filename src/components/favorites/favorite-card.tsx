@@ -11,6 +11,10 @@ import { ServiceIcon } from "@/components/icons/service-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Favorite } from "@/db/schema";
+import {
+  getFavoriteHealthLabel,
+  type FavoriteHealthResult,
+} from "@/lib/favorites/health";
 import { cn } from "@/lib/utils";
 
 type FavoriteCardItem = Favorite & {
@@ -21,10 +25,12 @@ export function FavoriteCard({
   item,
   canEdit,
   reserveDragHandleSpace = false,
+  health,
 }: {
   item: FavoriteCardItem;
   canEdit: boolean;
   reserveDragHandleSpace?: boolean;
+  health?: FavoriteHealthResult;
 }) {
   const primaryUrl = item.internalUrl || item.externalUrl;
   const tags = Array.isArray(item.tags)
@@ -93,6 +99,27 @@ export function FavoriteCard({
         <div className="flex items-center gap-2">
           <h2 className="truncate font-semibold">{item.name}</h2>
           {item.groupName ? <Badge>{item.groupName}</Badge> : null}
+          {item.healthCheckEnabled ? (
+            <span
+              className={cn(
+                "size-2 shrink-0 rounded-full",
+                !health && "bg-muted-foreground animate-pulse",
+                health?.status === "online" && "bg-success",
+                health?.status === "degraded" && "bg-warning",
+                health?.status === "offline" && "bg-destructive",
+              )}
+              title={
+                health
+                  ? `${getFavoriteHealthLabel(health.status)}${health.latencyMs !== null ? ` · ${health.latencyMs} ms` : ""}`
+                  : getFavoriteHealthLabel("checking")
+              }
+              aria-label={
+                health
+                  ? getFavoriteHealthLabel(health.status)
+                  : getFavoriteHealthLabel("checking")
+              }
+            />
+          ) : null}
         </div>
         <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-zinc-500">
           {item.description || "Service homelab sans description."}

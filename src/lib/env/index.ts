@@ -58,6 +58,7 @@ const envSchema = z
     ALERTMANAGER_TIMEOUT_MS: boundedTimeout(5000),
 
     DOCKER_PROXY_URL: optionalUrl,
+    DOCKER_CONTROL_PROXY_URL: optionalUrl,
     DOCKER_EXPECTED_HOSTNAME: z.string().trim().max(255).optional().or(z.literal("")),
     DOCKER_CONTROL_ENABLED: strictBoolean(false),
     DOCKER_LOGS_ENABLED: strictBoolean(true),
@@ -112,12 +113,11 @@ const envSchema = z
       }
     }
 
-    if (value.DOCKER_CONTROL_ENABLED) {
+    if (value.DOCKER_CONTROL_ENABLED && !value.DOCKER_CONTROL_PROXY_URL) {
       ctx.addIssue({
         code: "custom",
-        message:
-          "Docker control is intentionally disabled. Set DOCKER_CONTROL_ENABLED=false.",
-        path: ["DOCKER_CONTROL_ENABLED"],
+        message: "DOCKER_CONTROL_PROXY_URL is required when Docker control is enabled.",
+        path: ["DOCKER_CONTROL_PROXY_URL"],
       });
     }
 

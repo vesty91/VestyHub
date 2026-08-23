@@ -13,6 +13,7 @@ const VALID_BASE_ENV = {
   AUTH_LOCAL_ENABLED: "true",
   AUTHENTIK_ENABLED: "false",
   DOCKER_CONTROL_ENABLED: "false",
+  DOCKER_CONTROL_PROXY_URL: "http://docker-control-proxy:2375",
   DOCKER_LOGS_ENABLED: "true",
   SYNOLOGY_ENABLED: "false",
   DEMO_MODE: "false",
@@ -70,10 +71,17 @@ describe("environment validation", () => {
     expect(env.AUTHENTIK_ENABLED).toBe(true);
   });
 
-  it("keeps Docker control disabled throughout Phase 1", () => {
-    expect(() => parseEnv({ DOCKER_CONTROL_ENABLED: "true" })).toThrow(
-      /intentionally disabled/i,
+  it("allows Docker control to be explicitly enabled", () => {
+    expect(parseEnv({ DOCKER_CONTROL_ENABLED: "true" }).DOCKER_CONTROL_ENABLED).toBe(
+      true,
     );
+    expect(() => parseEnv({ DOCKER_CONTROL_ENABLED: "1" })).toThrow();
+    expect(() =>
+      parseEnv({
+        DOCKER_CONTROL_ENABLED: "true",
+        DOCKER_CONTROL_PROXY_URL: "",
+      }),
+    ).toThrow(/DOCKER_CONTROL_PROXY_URL/);
   });
 
   it("requires only Prometheus for Synology prometheus mode", () => {

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { FavoriteCard } from "@/components/favorites/favorite-card";
 import { GridStackFavorites } from "@/components/favorites/gridstack-favorites";
+import { useFavoriteHealth } from "@/components/favorites/use-favorite-health";
 import { Input } from "@/components/ui/input";
 import type { Favorite } from "@/db/schema";
 
@@ -26,6 +27,10 @@ export function FavoriteDirectory({
     [items],
   );
   const normalizedQuery = query.trim().toLowerCase();
+  const healthEnabledIds = items
+    .filter((item) => item.healthCheckEnabled)
+    .map((item) => item.id);
+  const { healthById } = useFavoriteHealth(healthEnabledIds);
   const filtered = items.filter((item) => {
     const tags = Array.isArray(item.tags) ? item.tags.join(" ") : "";
     const haystack = `${item.name} ${item.description ?? ""} ${tags}`.toLowerCase();
@@ -85,13 +90,19 @@ export function FavoriteDirectory({
               item={item}
               canEdit={canEdit}
               reserveDragHandleSpace={canEdit}
+              health={healthById[item.id]}
             />
           ))}
         </GridStackFavorites>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filtered.map((item) => (
-            <FavoriteCard key={item.id} item={item} canEdit={canEdit} />
+            <FavoriteCard
+              key={item.id}
+              item={item}
+              canEdit={canEdit}
+              health={healthById[item.id]}
+            />
           ))}
         </div>
       )}

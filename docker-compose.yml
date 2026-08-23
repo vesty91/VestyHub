@@ -20,7 +20,8 @@ x-app-environment: &app-environment
   ALERTMANAGER_URL: ${ALERTMANAGER_URL:-}
   ALERTMANAGER_TIMEOUT_MS: ${ALERTMANAGER_TIMEOUT_MS:-5000}
   DOCKER_PROXY_URL: ${DOCKER_PROXY_URL:-http://docker-socket-proxy:2375}
-  DOCKER_CONTROL_ENABLED: "false"
+  DOCKER_CONTROL_PROXY_URL: ${DOCKER_CONTROL_PROXY_URL:-http://docker-control-proxy:2375}
+  DOCKER_CONTROL_ENABLED: ${DOCKER_CONTROL_ENABLED:-false}
   DOCKER_LOGS_ENABLED: ${DOCKER_LOGS_ENABLED:-true}
   SYNOLOGY_ENABLED: ${SYNOLOGY_ENABLED:-false}
   SYNOLOGY_MODE: ${SYNOLOGY_MODE:-hybrid}
@@ -173,6 +174,57 @@ services:
       ALLOW_START: "0"
       ALLOW_STOP: "0"
       ALLOW_RESTARTS: "0"
+      ALLOW_PAUSE: "0"
+      ALLOW_UNPAUSE: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /run:size=8m,mode=0755
+      - /tmp:size=8m,mode=1777
+      - /var/lib/haproxy:size=8m,mode=0755
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2375/_ping | grep -qx OK"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  docker-control-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.2
+    restart: unless-stopped
+    environment:
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      CONFIGS: "0"
+      CONTAINERS: "0"
+      DISTRIBUTION: "0"
+      EVENTS: "0"
+      EXEC: "0"
+      GRPC: "0"
+      IMAGES: "0"
+      INFO: "0"
+      NETWORKS: "0"
+      NODES: "0"
+      PING: "1"
+      PLUGINS: "0"
+      POST: "1"
+      SECRETS: "0"
+      SERVICES: "0"
+      SESSION: "0"
+      SWARM: "0"
+      SYSTEM: "0"
+      TASKS: "0"
+      VERSION: "0"
+      VOLUMES: "0"
+      ALLOW_START: "1"
+      ALLOW_STOP: "1"
+      ALLOW_RESTARTS: "1"
       ALLOW_PAUSE: "0"
       ALLOW_UNPAUSE: "0"
     volumes:

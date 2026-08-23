@@ -67,7 +67,7 @@ export default async function FavoritesPage() {
               {groups.length} groupe{groups.length > 1 ? "s" : ""}
             </span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">Favoris</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Applications</h1>
           <p className="mt-2 text-sm text-zinc-500">
             Centralise les interfaces de ton NAS, tes conteneurs et tes outils.
           </p>
@@ -78,7 +78,7 @@ export default async function FavoritesPage() {
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-200"
           >
             <Plus className="size-4" />
-            Ajouter un favori
+            Ajouter une application
           </Link>
         ) : null}
       </header>
