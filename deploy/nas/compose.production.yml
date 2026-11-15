@@ -68,10 +68,10 @@ services:
       target: runner
     depends_on:
       migrate:
-        condition: service_started
+        condition: service_completed_successfully
         required: true
       postgres:
-        condition: service_started
+        condition: service_healthy
         required: true
     env_file:
       - .env
@@ -80,11 +80,31 @@ services:
       default: null
       docker_proxy: null
     ports:
-      - host_ip: 0.0.0.0
+      - host_ip: ${VESTYHUB_BIND_IP:-127.0.0.1}
         mode: ingress
         protocol: tcp
         published: "3001"
         target: 3000
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=128m,uid=1001,gid=1001,mode=0750
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      vestyhub.enable: "false"
     restart: unless-stopped
   cadvisor:
     image: ghcr.io/google/cadvisor:v0.60.5
@@ -147,7 +167,7 @@ services:
       - src/db/migrate.ts
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
         required: true
     env_file:
       - .env
@@ -227,6 +247,14 @@ services:
     image: postgres:17.10-alpine
     networks:
       default: null
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
     volumes:
       - source: postgres_data
@@ -273,10 +301,10 @@ services:
       - src/db/seed.ts
     depends_on:
       migrate:
-        condition: service_started
+        condition: service_completed_successfully
         required: true
       postgres:
-        condition: service_started
+        condition: service_healthy
         required: true
     env_file:
       - .env

@@ -562,7 +562,7 @@ i=1
 
 while [ "$i" -le 30 ]
 do
-    if "$DOCKER" exec "$APP_CID" node - <<'NODE'
+    if "$DOCKER" exec -i "$APP_CID" node - <<'NODE'
 (async () => {
   const urls = [
     "http://prometheus:9090/-/ready",

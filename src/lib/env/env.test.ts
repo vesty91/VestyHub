@@ -53,32 +53,30 @@ describe("environment validation", () => {
     expect(() => parseEnv({ DATABASE_URL: "not-a-url" })).toThrow();
   });
 
-  it("requires at least one authentication method", () => {
-    expect(() =>
-      parseEnv({ AUTH_LOCAL_ENABLED: "false", AUTHENTIK_ENABLED: "false" }),
-    ).toThrow();
-  });
-
-  it("requires all Authentik values when OIDC is enabled", () => {
-    expect(() => parseEnv({ AUTHENTIK_ENABLED: "true" })).toThrow();
-
-    const env = parseEnv({
-      AUTHENTIK_ENABLED: "true",
-      AUTHENTIK_ISSUER: "https://authentik.example.local/application/o/vestyhub/",
-      AUTHENTIK_CLIENT_ID: "client-id",
-      AUTHENTIK_CLIENT_SECRET: "client-secret",
-    });
-    expect(env.AUTHENTIK_ENABLED).toBe(true);
-  });
-
-  it("allows Docker control to be explicitly enabled", () => {
-    expect(parseEnv({ DOCKER_CONTROL_ENABLED: "true" }).DOCKER_CONTROL_ENABLED).toBe(
-      true,
+  it("requires local auth until an OIDC callback is implemented", () => {
+    expect(() => parseEnv({ AUTH_LOCAL_ENABLED: "false" })).toThrow(
+      /AUTH_LOCAL_ENABLED/,
     );
+    expect(() => parseEnv({ AUTHENTIK_ENABLED: "true" })).toThrow(
+      /AUTHENTIK_ENABLED/,
+    );
+  });
+
+  it("allows Docker control only with a pinned Docker engine identity", () => {
+    expect(() => parseEnv({ DOCKER_CONTROL_ENABLED: "true" })).toThrow(
+      /DOCKER_EXPECTED_HOSTNAME/,
+    );
+    expect(
+      parseEnv({
+        DOCKER_CONTROL_ENABLED: "true",
+        DOCKER_EXPECTED_HOSTNAME: "synology-nas",
+      }).DOCKER_CONTROL_ENABLED,
+    ).toBe(true);
     expect(() => parseEnv({ DOCKER_CONTROL_ENABLED: "1" })).toThrow();
     expect(() =>
       parseEnv({
         DOCKER_CONTROL_ENABLED: "true",
+        DOCKER_EXPECTED_HOSTNAME: "synology-nas",
         DOCKER_CONTROL_PROXY_URL: "",
       }),
     ).toThrow(/DOCKER_CONTROL_PROXY_URL/);

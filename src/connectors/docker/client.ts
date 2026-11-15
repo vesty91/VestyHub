@@ -148,6 +148,22 @@ async function dockerGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   return schema.parse(await response.json());
 }
 
+async function dockerControlInfo(): Promise<z.infer<typeof dockerInfoSchema>> {
+  const url = dockerControlUrl("info");
+  if (!url) throw new Error("Docker control proxy is not configured.");
+
+  const response = await fetchWithTimeout(url, {
+    timeoutMs: 5_000,
+    connectorName: "Docker NAS control",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(`Docker control proxy returned HTTP ${response.status}.`);
+  }
+  return dockerInfoSchema.parse(await response.json());
+}
+
 async function dockerPost(path: string): Promise<void> {
   const url = dockerControlUrl(path);
   if (!url) throw new Error("Docker control proxy is not configured.");
@@ -394,8 +410,23 @@ export async function controlDockerContainer(
   containerId: string,
   action: DockerContainerAction,
 ): Promise<void> {
-  if (!getEnv().DOCKER_CONTROL_ENABLED) {
+  const env = getEnv();
+  if (!env.DOCKER_CONTROL_ENABLED) {
     throw new Error("Docker control is disabled.");
+  }
+  // Fail closed: the read proxy and the write proxy must both identify as
+  // the explicitly configured NAS engine before any mutating Docker request.
+  const expected = env.DOCKER_EXPECTED_HOSTNAME?.trim().toLowerCase();
+  if (!expected) throw new Error("Docker expected hostname is not configured.");
+  const [readHost, writeHost] = await Promise.all([
+    dockerGet("info", dockerInfoSchema),
+    dockerControlInfo(),
+  ]);
+  if (
+    readHost.Name.trim().toLowerCase() !== expected ||
+    writeHost.Name.trim().toLowerCase() !== expected
+  ) {
+    throw new Error("Docker engine identity mismatch.");
   }
 
   const containers = await dockerGet(
@@ -409,7 +440,7 @@ export async function controlDockerContainer(
     `containers/${encodeURIComponent(target.Id)}/json`,
     dockerInspectSchema,
   );
-  if (isProtectedVestyHubContainer(inspect.Config.Labels)) {
+  if (isProtectedVestyHubContainer(inspect.Config.Labels, target.Names)) {
     throw new Error("Protected VestyHub container.");
   }
 
