@@ -7,6 +7,7 @@ import { DashboardApplications } from "@/components/dashboard/dashboard-applicat
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
 import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
 import { LocalHealthWidget } from "@/components/dashboard/local-health-widget";
+import { LocalResourcesPanel } from "@/components/dashboard/local-resources-panel";
 import { MonitoringWidget } from "@/components/dashboard/monitoring-widget";
 import { StatusWidget } from "@/components/dashboard/status-widget";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const env = getEnv();
   const isLocalDevelopment = env.NODE_ENV === "development" && !env.SYNOLOGY_ENABLED;
+  const isLocalWindows = isLocalDevelopment && process.platform === "win32";
 
   const [dashboard] = await db
     .select()
@@ -104,7 +106,7 @@ export default async function DashboardPage() {
         .where(eq(auditLogs.userId, user.id))
         .orderBy(desc(auditLogs.createdAt))
         .limit(5),
-      getDockerOverview(),
+      isLocalDevelopment ? Promise.resolve(null) : getDockerOverview(),
     ]);
 
   const favoriteCount = Number(favoriteStats[0]?.value ?? 0);
@@ -121,12 +123,12 @@ export default async function DashboardPage() {
     },
     {
       label: "Conteneurs Docker",
-      value: docker.available ? docker.counters.total : "—",
-      detail: docker.available
+      value: docker?.available ? docker.counters.total : "—",
+      detail: docker?.available
         ? `${docker.counters.running} en cours`
         : "Proxy indisponible",
       icon: <Container className="size-4" />,
-      tone: docker.available ? ("success" as const) : ("warning" as const),
+      tone: docker?.available ? ("success" as const) : ("warning" as const),
     },
     {
       label: "Widgets",
@@ -157,7 +159,7 @@ export default async function DashboardPage() {
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
               <span className="bg-success size-1.5 rounded-full" />
-              Phase 3K · v0.3.0
+              {isLocalWindows ? "Dashboard local V2" : "Phase 3K · v0.3.0"}
             </Badge>
             <span className="text-muted-foreground text-xs">
               Dashboard personnalisable
@@ -184,18 +186,22 @@ export default async function DashboardPage() {
           <div>
             <p className="font-medium text-cyan-200">Mode local actif</p>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
-              Le NAS n’est pas requis. Pour suivre Next.js et PostgreSQL, active «
-              Modifier le dashboard », puis ajoute le widget « Diagnostic local ».
+              VestyHub surveille les ressources Windows et ses services locaux, sans
+              connexion au Synology.
             </p>
           </div>
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </section>
+      {isLocalWindows ? (
+        <LocalResourcesPanel />
+      ) : (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé">
+          {stats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))}
+        </section>
+      )}
 
       <section className="space-y-3" aria-labelledby="applications-title">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -281,7 +287,23 @@ export default async function DashboardPage() {
                 ) : null}
                 {widget.widgetType === "system-status" ? (
                   <StatusWidget
-                    docker={docker}
+                    docker={
+                      docker ?? {
+                        available: false,
+                        partial: false,
+                        fetchedAt: new Date().toISOString(),
+                        counters: {
+                          total: 0,
+                          running: 0,
+                          paused: 0,
+                          stopped: 0,
+                          unhealthy: 0,
+                        },
+                        containers: [],
+                        warnings: [],
+                        error: "Mode local : proxy NAS non configuré",
+                      }
+                    }
                     databaseReady
                     configuration={resolveDashboardWidgetConfiguration(
                       "system-status",
@@ -319,49 +341,58 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-        <Panel>
-          <PanelHeader
-            title="Docker"
-            subtitle="Synthèse du moteur NAS en lecture seule"
-            icon={<Container className="size-4" />}
-            action={
-              <Link href="/docker" className="text-primary hover:text-primary/80 text-xs">
-                Voir les détails
-              </Link>
-            }
-          />
+      <section
+        className={
+          isLocalDevelopment ? "grid gap-4" : "grid gap-4 xl:grid-cols-[1.5fr_1fr]"
+        }
+      >
+        {!isLocalDevelopment && docker ? (
+          <Panel>
+            <PanelHeader
+              title="Docker"
+              subtitle="Synthèse du moteur NAS en lecture seule"
+              icon={<Container className="size-4" />}
+              action={
+                <Link
+                  href="/docker"
+                  className="text-primary hover:text-primary/80 text-xs"
+                >
+                  Voir les détails
+                </Link>
+              }
+            />
 
-          {docker.available && docker.engine ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="bg-surface-elevated/65 rounded-xl p-4">
-                <StatusDot
-                  tone="success"
-                  label="Actifs"
-                  pulse={docker.counters.running > 0}
-                />
-                <p className="text-success mt-3 text-2xl font-semibold">
-                  {docker.counters.running}
-                </p>
+            {docker.available && docker.engine ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="bg-surface-elevated/65 rounded-xl p-4">
+                  <StatusDot
+                    tone="success"
+                    label="Actifs"
+                    pulse={docker.counters.running > 0}
+                  />
+                  <p className="text-success mt-3 text-2xl font-semibold">
+                    {docker.counters.running}
+                  </p>
+                </div>
+                <div className="bg-surface-elevated/65 rounded-xl p-4">
+                  <StatusDot tone="neutral" label="Arrêtés" />
+                  <p className="mt-3 text-2xl font-semibold">{docker.counters.stopped}</p>
+                </div>
+                <div className="bg-surface-elevated/65 rounded-xl p-4">
+                  <StatusDot tone="info" label="Images" />
+                  <p className="text-info mt-3 text-2xl font-semibold">
+                    {docker.engine.images}
+                  </p>
+                </div>
               </div>
-              <div className="bg-surface-elevated/65 rounded-xl p-4">
-                <StatusDot tone="neutral" label="Arrêtés" />
-                <p className="mt-3 text-2xl font-semibold">{docker.counters.stopped}</p>
+            ) : (
+              <div className="border-warning/20 bg-warning/[0.06] rounded-xl border p-4">
+                <StatusDot tone="warning" label="Docker indisponible" />
+                <p className="text-muted-foreground mt-2 text-sm">{docker.error}</p>
               </div>
-              <div className="bg-surface-elevated/65 rounded-xl p-4">
-                <StatusDot tone="info" label="Images" />
-                <p className="text-info mt-3 text-2xl font-semibold">
-                  {docker.engine.images}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="border-warning/20 bg-warning/[0.06] rounded-xl border p-4">
-              <StatusDot tone="warning" label="Docker indisponible" />
-              <p className="text-muted-foreground mt-2 text-sm">{docker.error}</p>
-            </div>
-          )}
-        </Panel>
+            )}
+          </Panel>
+        ) : null}
 
         <Panel>
           <PanelHeader

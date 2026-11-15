@@ -38,12 +38,28 @@ the development database volume intact.
 
 In PowerShell, use `Set-Location D:\Dev\VestyHub` in place of `cd /d`.
 
-## Dashboard - diagnostic local
+## Dashboard local V2 — ressources Windows
 
-Dans le dashboard, activer le mode modification puis ajouter **Diagnostic local**.
-Le widget indique l'etat HTTP reel de Next.js et de PostgreSQL via les endpoints
-`/api/health/live` et `/api/health/ready` (intervalle reglable 5-60 s).
-Il ne depend pas du NAS, ne contacte pas le Docker Engine et ne redemarre aucun service.
+Le dashboard affiche automatiquement quatre cartes : **CPU**, **RAM**, **Stockage**
+et **Services locaux**. Les données sont réelles et actualisées toutes les 15 secondes
+(ou immédiatement via le bouton Actualiser).
+
+- CPU : pourcentage mesuré sur 250 ms via les compteurs Windows de Node.js.
+- RAM : mémoire utilisée/libre rapportée par Windows, sans agent supplémentaire.
+- Stockage : lecteurs système et projet, avec le disque D: prioritaire à l'affichage.
+- Services : état HTTP de Next.js et PostgreSQL (2/2 lorsque les deux répondent).
+
+La route `GET /api/local/resources` requiert une session authentifiée et est
+**désactivée en production, sur Linux et lorsque le Synology est activé**.
+Aucun Docker socket, accès NAS, Prometheus ni collecte de fichiers n'est requis.
+Aucun secret ou chemin personnel n'est retourné à la page.
+
+Les anciens widgets **Statut général** et **Diagnostic local** ont été masqués
+pour le compte de développement afin d'éviter les doublons. Ils ne sont **pas supprimés** :
+cliquer sur _Modifier la disposition_ pour les réactiver. En mode local, le panneau
+Docker NAS est masqué plutôt que présenté comme un incident.
+
+Le widget historique Diagnostic local reste disponible pour les autres déploiements.
 
 ## Health checks
 
