@@ -5,9 +5,12 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 
 test("an administrator can sign in and open the dashboard", async ({ page }) => {
   test.skip(
-    !adminEmail || !adminPassword,
+    !process.env.CI && (!adminEmail || !adminPassword),
     "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to run the authenticated flow.",
   );
+  if (!adminEmail || !adminPassword) {
+    throw new Error("E2E administrator credentials are required in CI.");
+  }
 
   await page.goto("/login");
   await page.getByLabel("Adresse e-mail").fill(adminEmail!);
@@ -17,6 +20,6 @@ test("an administrator can sign in and open the dashboard", async ({ page }) => 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { name: /Bonjour,/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Applications" })).toBeVisible();
-  await page.getByRole("link", { name: "Ajouter une application" }).click();
+  await page.getByRole("link", { name: "Ajouter une application" }).first().click();
   await expect(page).toHaveURL(/\/favorites\/new$/);
 });
