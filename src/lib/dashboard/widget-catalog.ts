@@ -12,6 +12,10 @@ export const DASHBOARD_WIDGET_TYPES = [
 
 export const dashboardWidgetTypeSchema = z.enum(DASHBOARD_WIDGET_TYPES);
 
+export function isDashboardWidgetType(value: string): value is DashboardWidgetType {
+  return dashboardWidgetTypeSchema.safeParse(value).success;
+}
+
 export const dashboardWidgetSelectionPayloadSchema = z.object({
   dashboardId: z.string().uuid(),
   type: dashboardWidgetTypeSchema,

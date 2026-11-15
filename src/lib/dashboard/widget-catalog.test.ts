@@ -9,6 +9,7 @@ import {
   dashboardWidgetVisibilityPayloadSchema,
   getDashboardWidgetDefinition,
   getDefaultDashboardWidgetConfiguration,
+  isDashboardWidgetType,
   parseDashboardWidgetConfiguration,
   resolveDashboardWidgetConfiguration,
 } from "./widget-catalog";
@@ -25,6 +26,8 @@ describe("dashboard widget catalog", () => {
 
   it("rejects unknown widget types", () => {
     expect(dashboardWidgetTypeSchema.safeParse("unknown").success).toBe(false);
+    expect(isDashboardWidgetType("local-health")).toBe(true);
+    expect(isDashboardWidgetType("unknown")).toBe(false);
   });
 
   it("exposes bounded positive defaults", () => {

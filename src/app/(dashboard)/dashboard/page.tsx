@@ -28,7 +28,10 @@ import {
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
 import { getEnv } from "@/lib/env";
-import { resolveDashboardWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
+import {
+  isDashboardWidgetType,
+  resolveDashboardWidgetConfiguration,
+} from "@/lib/dashboard/widget-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -302,9 +305,7 @@ export default async function DashboardPage() {
                     )}
                   />
                 ) : null}
-                {!["clock", "favorites", "system-status", "monitoring"].includes(
-                  widget.widgetType,
-                ) ? (
+                {!isDashboardWidgetType(widget.widgetType) ? (
                   <Panel className="h-full">
                     <p className="text-sm font-medium">{widget.title}</p>
                     <p className="text-muted-foreground mt-2 text-xs">
