@@ -6,6 +6,7 @@ import { ClockWidget } from "@/components/dashboard/clock-widget";
 import { DashboardApplications } from "@/components/dashboard/dashboard-applications";
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
 import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
+import { LocalHealthWidget } from "@/components/dashboard/local-health-widget";
 import { MonitoringWidget } from "@/components/dashboard/monitoring-widget";
 import { StatusWidget } from "@/components/dashboard/status-widget";
 import { Badge } from "@/components/ui/badge";
@@ -213,6 +214,7 @@ export default async function DashboardPage() {
               const contentMinHeight = [
                 "favorites",
                 "system-status",
+                "local-health",
                 "monitoring",
               ].includes(widget.widgetType)
                 ? 2
@@ -257,6 +259,14 @@ export default async function DashboardPage() {
                     databaseReady
                     configuration={resolveDashboardWidgetConfiguration(
                       "system-status",
+                      widget.configuration,
+                    )}
+                  />
+                ) : null}
+                {widget.widgetType === "local-health" ? (
+                  <LocalHealthWidget
+                    configuration={resolveDashboardWidgetConfiguration(
+                      "local-health",
                       widget.configuration,
                     )}
                   />

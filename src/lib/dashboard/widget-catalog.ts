@@ -6,6 +6,7 @@ export const DASHBOARD_WIDGET_TYPES = [
   "clock",
   "favorites",
   "system-status",
+  "local-health",
   "monitoring",
 ] as const;
 
@@ -50,6 +51,12 @@ export const systemStatusWidgetConfigurationSchema = z
     },
   );
 
+export const localHealthWidgetConfigurationSchema = z
+  .object({
+    refreshSeconds: z.number().int().min(5).max(60).default(15),
+  })
+  .strict();
+
 export const monitoringWidgetConfigurationSchema = z
   .object({
     range: z.enum(MONITORING_RANGES).default("1h"),
@@ -83,6 +90,13 @@ export const dashboardWidgetSettingsPayloadSchema = z.discriminatedUnion("type",
   z
     .object({
       dashboardId: z.string().uuid(),
+      type: z.literal("local-health"),
+      configuration: localHealthWidgetConfigurationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      dashboardId: z.string().uuid(),
       type: z.literal("monitoring"),
       configuration: monitoringWidgetConfigurationSchema,
     })
@@ -97,6 +111,9 @@ export type FavoritesWidgetConfiguration = z.infer<
 export type SystemStatusWidgetConfiguration = z.infer<
   typeof systemStatusWidgetConfigurationSchema
 >;
+export type LocalHealthWidgetConfiguration = z.infer<
+  typeof localHealthWidgetConfigurationSchema
+>;
 export type MonitoringWidgetConfiguration = z.infer<
   typeof monitoringWidgetConfigurationSchema
 >;
@@ -104,12 +121,14 @@ export type DashboardWidgetConfiguration =
   | ClockWidgetConfiguration
   | FavoritesWidgetConfiguration
   | SystemStatusWidgetConfiguration
+  | LocalHealthWidgetConfiguration
   | MonitoringWidgetConfiguration;
 
 export type DashboardWidgetConfigurationByType = {
   clock: ClockWidgetConfiguration;
   favorites: FavoritesWidgetConfiguration;
   "system-status": SystemStatusWidgetConfiguration;
+  "local-health": LocalHealthWidgetConfiguration;
   monitoring: MonitoringWidgetConfiguration;
 };
 
@@ -156,6 +175,16 @@ export const DASHBOARD_WIDGET_CATALOG: readonly DashboardWidgetDefinition[] = [
     refreshInterval: 15000,
   },
   {
+    type: "local-health",
+    title: "Diagnostic local",
+    description: "Vérifie régulièrement Next.js et PostgreSQL, même sans NAS.",
+    width: 3,
+    height: 2,
+    minWidth: 2,
+    minHeight: 2,
+    refreshInterval: 15_000,
+  },
+  {
     type: "monitoring",
     title: "Monitoring",
     description: "Affiche les métriques Prometheus, alertes et sources d’observabilité.",
@@ -196,6 +225,10 @@ export function parseDashboardWidgetConfiguration<T extends DashboardWidgetType>
       ) as DashboardWidgetConfigurationByType[T];
     case "system-status":
       return systemStatusWidgetConfigurationSchema.parse(
+        configuration,
+      ) as DashboardWidgetConfigurationByType[T];
+    case "local-health":
+      return localHealthWidgetConfigurationSchema.parse(
         configuration,
       ) as DashboardWidgetConfigurationByType[T];
     case "monitoring":

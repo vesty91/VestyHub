@@ -38,6 +38,13 @@ the development database volume intact.
 
 In PowerShell, use `Set-Location D:\Dev\VestyHub` in place of `cd /d`.
 
+## Dashboard - diagnostic local
+
+Dans le dashboard, activer le mode modification puis ajouter **Diagnostic local**.
+Le widget indique l'etat HTTP reel de Next.js et de PostgreSQL via les endpoints
+`/api/health/live` et `/api/health/ready` (intervalle reglable 5-60 s).
+Il ne depend pas du NAS, ne contacte pas le Docker Engine et ne redemarre aucun service.
+
 ## Health checks
 
 ```bat

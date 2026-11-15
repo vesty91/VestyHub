@@ -90,6 +90,9 @@ describe("dashboard widget catalog", () => {
       showDocker: true,
       showSession: true,
     });
+    expect(getDefaultDashboardWidgetConfiguration("local-health")).toEqual({
+      refreshSeconds: 15,
+    });
     expect(getDefaultDashboardWidgetConfiguration("monitoring")).toEqual({
       range: "1h",
       showAlerts: true,
@@ -141,6 +144,25 @@ describe("dashboard widget catalog", () => {
         },
       }).success,
     ).toBe(false);
+  });
+
+  it("bounds local health polling intervals", () => {
+    expect(
+      dashboardWidgetSettingsPayloadSchema.safeParse({
+        dashboardId,
+        type: "local-health",
+        configuration: { refreshSeconds: 5 },
+      }).success,
+    ).toBe(true);
+    for (const refreshSeconds of [0, 4, 61, 1000]) {
+      expect(
+        dashboardWidgetSettingsPayloadSchema.safeParse({
+          dashboardId,
+          type: "local-health",
+          configuration: { refreshSeconds },
+        }).success,
+      ).toBe(false);
+    }
   });
 
   it("rejects arbitrary widget configuration keys", () => {
