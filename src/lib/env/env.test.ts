@@ -54,12 +54,8 @@ describe("environment validation", () => {
   });
 
   it("requires local auth until an OIDC callback is implemented", () => {
-    expect(() => parseEnv({ AUTH_LOCAL_ENABLED: "false" })).toThrow(
-      /AUTH_LOCAL_ENABLED/,
-    );
-    expect(() => parseEnv({ AUTHENTIK_ENABLED: "true" })).toThrow(
-      /AUTHENTIK_ENABLED/,
-    );
+    expect(() => parseEnv({ AUTH_LOCAL_ENABLED: "false" })).toThrow(/AUTH_LOCAL_ENABLED/);
+    expect(() => parseEnv({ AUTHENTIK_ENABLED: "true" })).toThrow(/AUTHENTIK_ENABLED/);
   });
 
   it("allows Docker control only with a pinned Docker engine identity", () => {
