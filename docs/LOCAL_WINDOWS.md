@@ -61,6 +61,21 @@ Docker NAS est masqué plutôt que présenté comme un incident.
 
 Le widget historique Diagnostic local reste disponible pour les autres déploiements.
 
+### Processus Windows (Top 5 RAM)
+
+Le dashboard V2 inclut un tableau des 5 processus les plus gourmands en RAM,
+avec leur **nom**, **PID**, **mémoire résidente** (working set) et une barre de
+comparaison. La route `GET /api/local/processes` est réservée aux sessions
+authentifiées, en développement local Windows uniquement, et désactivée sur
+le NAS ainsi qu'en production. Elle exécute uniquement `tasklist.exe /FO CSV /NH`
+avec des paramètres fixes, sans shell et sans commande de modification.
+
+Le relevé est mis en cache pendant 30 secondes afin de préserver les ressources
+Windows, et n'est pas rafraîchi en permanence lorsqu'un onglet est masqué.
+Attention : le working set inclut des pages partagées ; ne pas additionner les
+valeurs pour obtenir la RAM consommée globalement. Les lignes ne permettent
+**pas de terminer un processus**.
+
 ## Health checks
 
 ```bat

@@ -8,6 +8,7 @@ import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
 import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
 import { LocalHealthWidget } from "@/components/dashboard/local-health-widget";
 import { LocalResourcesPanel } from "@/components/dashboard/local-resources-panel";
+import { LocalTopProcesses } from "@/components/dashboard/local-top-processes";
 import { MonitoringWidget } from "@/components/dashboard/monitoring-widget";
 import { StatusWidget } from "@/components/dashboard/status-widget";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +195,10 @@ export default async function DashboardPage() {
       ) : null}
 
       {isLocalWindows ? (
-        <LocalResourcesPanel />
+        <div className="space-y-3">
+          <LocalResourcesPanel />
+          <LocalTopProcesses />
+        </div>
       ) : (
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé">
           {stats.map((stat) => (
