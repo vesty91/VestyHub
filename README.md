@@ -191,6 +191,7 @@ Les connecteurs NAS et monitoring sont eux aussi conçus en lecture seule depuis
 
 ## Documentation
 
+- [Windows 11 — développement local isolé](docs/LOCAL_WINDOWS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Authentification](docs/AUTHENTICATION.md)
 - [Favoris](docs/FAVORITES.md)

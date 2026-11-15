@@ -66,3 +66,4 @@ jobs:
           docker compose --project-directory "$PWD" -f docker-compose.yml -f docker-compose.override.yml config --quiet
           docker compose --project-directory "$PWD" -f deploy/nas/compose.production.yml config --quiet
           sh -n deploy/nas/deploy-production.sh
+          docker compose --env-file .env.example -f compose.local.yml config --quiet
