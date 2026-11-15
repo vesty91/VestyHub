@@ -53,6 +53,10 @@ jobs:
     name: NAS deployment manifests
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      AUTH_SECRET: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      APP_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      POSTGRES_PASSWORD: ci-only-dummy-password
     steps:
       - uses: actions/checkout@v4
       - name: Validate Compose configs and deployment script
