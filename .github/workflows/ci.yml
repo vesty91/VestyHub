@@ -48,3 +48,17 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:unit
       - run: pnpm build
+
+  deployment_sanity:
+    name: NAS deployment manifests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configs and deployment script
+        shell: bash
+        run: |
+          cp .env.example .env
+          docker compose --project-directory "$PWD" -f docker-compose.yml -f docker-compose.override.yml config --quiet
+          docker compose --project-directory "$PWD" -f deploy/nas/compose.production.yml config --quiet
+          sh -n deploy/nas/deploy-production.sh
