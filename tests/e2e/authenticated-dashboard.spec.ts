@@ -16,5 +16,7 @@ test("an administrator can sign in and open the dashboard", async ({ page }) => 
 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { name: /Bonjour,/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Favoris" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Applications" })).toBeVisible();
+  await page.getByRole("link", { name: "Ajouter une application" }).click();
+  await expect(page).toHaveURL(/\/favorites\/new$/);
 });

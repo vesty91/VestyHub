@@ -67,3 +67,75 @@ jobs:
           docker compose --project-directory "$PWD" -f deploy/nas/compose.production.yml config --quiet
           sh -n deploy/nas/deploy-production.sh
           docker compose --env-file .env.example -f compose.local.yml config --quiet
+
+  e2e:
+    name: Playwright desktop and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: vestyhub
+          POSTGRES_PASSWORD: ci-only-dummy-password
+          POSTGRES_DB: vestyhub_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vestyhub -d vestyhub_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: production
+      APP_NAME: VestyHub CI
+      APP_URL: http://127.0.0.1:3000
+      APP_PORT: "3000"
+      APP_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      AUTH_SECRET: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      DATABASE_URL: postgresql://vestyhub:ci-only-dummy-password@127.0.0.1:5432/vestyhub_e2e
+      AUTH_LOCAL_ENABLED: "true"
+      AUTHENTIK_ENABLED: "false"
+      DOCKER_CONTROL_ENABLED: "false"
+      DOCKER_LOGS_ENABLED: "false"
+      SYNOLOGY_ENABLED: "false"
+      SYNOLOGY_VERIFY_TLS: "true"
+      DEMO_MODE: "false"
+      SEED_ADMIN_EMAIL: e2e-admin@vestyhub.local
+      SEED_ADMIN_PASSWORD: ci-only-strong-admin-password
+      E2E_ADMIN_EMAIL: e2e-admin@vestyhub.local
+      E2E_ADMIN_PASSWORD: ci-only-strong-admin-password
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm build
+      - run: pnpm test:e2e
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
