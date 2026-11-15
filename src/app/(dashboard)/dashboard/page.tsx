@@ -27,12 +27,15 @@ import {
   favorites,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
+import { getEnv } from "@/lib/env";
 import { resolveDashboardWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await requireUser();
+  const env = getEnv();
+  const isLocalDevelopment = env.NODE_ENV === "development" && !env.SYNOLOGY_ENABLED;
 
   const [dashboard] = await db
     .select()
@@ -142,7 +145,11 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-[1600px] space-y-7">
       <PageHeader
         title={`Bonjour, ${user.name.split(" ")[0]}`}
-        description="Voici l’état actuel de ton environnement homelab, alimenté par PostgreSQL et les connecteurs réels du NAS."
+        description={
+          isLocalDevelopment
+            ? "Ton centre de contrôle en développement local, sans dépendance au Synology."
+            : "Voici l’état actuel de ton environnement homelab, alimenté par PostgreSQL et les connecteurs réels du NAS."
+        }
         eyebrow={
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
@@ -164,6 +171,22 @@ export default async function DashboardPage() {
           </Link>
         }
       />
+
+      {isLocalDevelopment ? (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] p-4 text-sm"
+          role="status"
+        >
+          <Activity className="mt-0.5 size-4 shrink-0 text-cyan-300" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-cyan-200">Mode local actif</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              Le NAS n’est pas requis. Pour suivre Next.js et PostgreSQL, active «
+              Modifier le dashboard », puis ajoute le widget « Diagnostic local ».
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé">
         {stats.map((stat) => (
