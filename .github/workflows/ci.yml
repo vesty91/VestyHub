@@ -209,3 +209,5 @@ jobs:
       - name: Verify PostgreSQL logical backup and isolated restore
         shell: bash
         run: bash scripts/ci-backup-restore-drill.sh
+      - name: Verify real PostgreSQL outage and recovery on disposable Docker
+        run: pnpm exec tsx scripts/test-postgres-outage.ts

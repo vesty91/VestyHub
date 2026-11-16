@@ -18,6 +18,24 @@ docker compose ps
 docker compose logs --tail=100 postgres app
 ```
 
+## Exercice de panne PostgreSQL totalement isolé
+
+Depuis le dépôt sur un poste équipé de Docker et de pnpm :
+
+```bat
+pnpm exec tsx scripts/test-postgres-outage.ts
+```
+
+Le script lance **son propre PostgreSQL 17** sur un port local attribué
+aléatoirement, avec des données exclusivement en `tmpfs` (aucun volume nommé),
+puis vérifie : disponibilité initiale, détection d'une panne réelle par
+`docker pause`, reprise après `docker unpause` et conservation d'un enregistrement
+de test. Le conteneur jetable est supprimé à la fin, y compris après échec
+normal du scénario. La CI répète cet exercice après la restauration isolée.
+
+**Ne jamais faire cette manipulation sur le conteneur de développement
+`vestyhub-windows-local-postgres-1` ou sur la production NAS.**
+
 ## PostgreSQL temporairement indisponible dans l'interface
 
 Si une requête de session ou de dashboard échoue et que
