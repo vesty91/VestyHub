@@ -6,6 +6,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getCurrentSession } from "@/lib/auth/session";
+import { withDatabaseReadDeadline } from "@/lib/database-read-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ export default async function LoginPage() {
     redirect("/dashboard");
   }
 
-  const [{ totalUsers }] = await db.select({ totalUsers: count() }).from(users);
+  const [{ totalUsers }] = await withDatabaseReadDeadline(
+    db.select({ totalUsers: count() }).from(users),
+  );
   const hasAccount = Number(totalUsers) > 0;
 
   return (

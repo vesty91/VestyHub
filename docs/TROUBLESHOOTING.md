@@ -18,6 +18,26 @@ docker compose ps
 docker compose logs --tail=100 postgres app
 ```
 
+## Test de récupération de session en vrai navigateur
+
+Depuis le dépôt, sur une machine équipée de Docker, pnpm et Chromium Playwright :
+
+```bat
+pnpm exec tsx scripts/test-postgres-browser-recovery.ts
+```
+
+Le test démarre un PostgreSQL 17 **jetable en tmpfs** sur un port loopback
+aléatoire, exécute migrations et seed sur cette seule base, démarre un Next.js
+de développement avec son propre répertoire de compilation, puis ouvre Chromium.
+Il vérifie l'authentification, la page de panne, `ready=503`, le retour
+`ready=200`, le lien de reprise et la persistance de la session et d'une donnée.
+La CI Playwright exécute également ce scénario **après** les tests ordinaires.
+
+Les lectures de session et du dashboard disposent d'une deadline côté rendu
+(8 et 12 secondes). Cette limite ne remplace pas une annulation SQL : une
+requête de lecture interrompue côté HTTP peut finir plus tard sur le serveur.
+Ne pas appliquer ce mécanisme de `Promise.race` aux écritures ni aux migrations.
+
 ## Exercice de panne PostgreSQL totalement isolé
 
 Depuis le dépôt sur un poste équipé de Docker et de pnpm :
@@ -47,9 +67,9 @@ Si une requête de session ou de dashboard échoue et que
 - Le navigateur contrôle automatiquement la disponibilité toutes les
   **15 secondes** lorsque l'onglet est visible. Le bouton **Vérifier PostgreSQL**
   permet aussi de tester immédiatement.
-- Quand le service répond **200**, le bouton **Reprendre VestyHub** apparaît.
-  Le dashboard est rechargé à la demande ; l'authentification existante est
-  vérifiée normalement. Aucun compte ou cookie n'est supprimé par le contrôle.
+- Quand le service répond **200**, le lien **Reprendre VestyHub** apparaît.
+  Il effectue une nouvelle navigation HTTP vers `/dashboard` ; l'authentification
+  existante est vérifiée normalement. Aucun compte ou cookie n'est supprimé par le contrôle.
 - Si la base est saine mais qu'une autre erreur apparaît, la page présente
   une erreur générique et laisse le bouton **Réessayer** accessible.
 - Le diagnostic ne retourne **ni SQL, ni identifiants, ni URL de base**.

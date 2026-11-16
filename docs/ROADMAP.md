@@ -46,8 +46,8 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       reprise avec sonde unique) ; délais totaux DSM, Docker NAS et monitoring
       vérifiés sur réponses HTTP fragmentées. La résilience PostgreSQL est
       vérifiée sur base Docker jetable (panne réelle, reprise et conservation
-      d'une donnée) ; reste la validation staging NAS avant de considérer la
-      dégradation comme complète.
+      d'une donnée), complétée par un scénario Chromium de reconnexion à une
+      session existante ; reste la validation staging NAS.
 - [ ] **Contrôle dépendances** : audit des bibliothèques runtime, analyse de licences
       et plan de patch avec mise à jour testée. Ne pas appliquer une mise à jour
       majeure sans tests.

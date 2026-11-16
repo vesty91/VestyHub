@@ -148,15 +148,28 @@ export default function ErrorPage({
               {checking ? "Vérification…" : "Vérifier PostgreSQL"}
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={reset}
-            disabled={databaseUnavailable || failureKind === "checking"}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw className="size-4" aria-hidden="true" />
-            {recovered ? "Reprendre VestyHub" : "Réessayer"}
-          </button>
+          {recovered ? (
+            // A full navigation is intentional: an initial server render
+            // failure cannot always be retried by the client error boundary.
+            // The server revalidates the existing session on /dashboard.
+            <a
+              href="/dashboard"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition focus-visible:ring-2"
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              Reprendre VestyHub
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={reset}
+              disabled={databaseUnavailable || failureKind === "checking"}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              Réessayer
+            </button>
+          )}
         </div>
       </div>
     </main>

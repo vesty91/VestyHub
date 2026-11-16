@@ -52,8 +52,9 @@ describe("application error page", () => {
     expect(await screen.findByText("PostgreSQL répond de nouveau")).toBeInTheDocument();
     expect(screen.getByText(/ta session sera vérifiée/)).toBeInTheDocument();
     expect(reset).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "Reprendre VestyHub" }));
-    expect(reset).toHaveBeenCalledTimes(1);
+    const resume = screen.getByRole("link", { name: "Reprendre VestyHub" });
+    expect(resume).toHaveAttribute("href", "/dashboard");
+    expect(reset).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/health/ready",
       expect.objectContaining({

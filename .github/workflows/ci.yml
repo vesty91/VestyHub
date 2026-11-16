@@ -133,6 +133,8 @@ jobs:
         run: pnpm exec tsx scripts/ci-seed-rbac.ts
       - run: pnpm build
       - run: pnpm test:e2e
+      - name: Exercise real PostgreSQL outage and browser dashboard recovery
+        run: pnpm exec tsx scripts/test-postgres-browser-recovery.ts
 
       - name: Upload Playwright traces on failure
         if: failure()

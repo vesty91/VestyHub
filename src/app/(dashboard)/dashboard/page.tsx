@@ -29,6 +29,7 @@ import {
   favorites,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
+import { withDatabaseReadDeadline } from "@/lib/database-read-deadline";
 import { getEnv } from "@/lib/env";
 import {
   isDashboardWidgetType,
@@ -43,72 +44,80 @@ export default async function DashboardPage() {
   const isLocalDevelopment = env.NODE_ENV === "development" && !env.SYNOLOGY_ENABLED;
   const isLocalWindows = isLocalDevelopment && process.platform === "win32";
 
-  const [dashboard] = await db
-    .select()
-    .from(dashboards)
-    .where(eq(dashboards.userId, user.id))
-    .orderBy(desc(dashboards.isDefault), dashboards.createdAt)
-    .limit(1);
+  const [dashboard] = await withDatabaseReadDeadline(
+    db
+      .select()
+      .from(dashboards)
+      .where(eq(dashboards.userId, user.id))
+      .orderBy(desc(dashboards.isDefault), dashboards.createdAt)
+      .limit(1),
+  );
 
   const [widgets, pinnedFavorites, favoriteStats, groupStats, recentEvents, docker] =
-    await Promise.all([
-      dashboard
-        ? db
-            .select()
-            .from(dashboardWidgets)
-            .where(eq(dashboardWidgets.dashboardId, dashboard.id))
-            .orderBy(dashboardWidgets.positionY, dashboardWidgets.positionX)
-        : Promise.resolve([]),
-      db
-        .select({
-          id: favorites.id,
-          userId: favorites.userId,
-          groupId: favorites.groupId,
-          name: favorites.name,
-          description: favorites.description,
-          internalUrl: favorites.internalUrl,
-          externalUrl: favorites.externalUrl,
-          iconType: favorites.iconType,
-          iconValue: favorites.iconValue,
-          tags: favorites.tags,
-          openMode: favorites.openMode,
-          healthCheckEnabled: favorites.healthCheckEnabled,
-          healthCheckUrl: favorites.healthCheckUrl,
-          dockerContainerId: favorites.dockerContainerId,
-          connectorId: favorites.connectorId,
-          sortOrder: favorites.sortOrder,
-          isFavorite: favorites.isFavorite,
-          positionX: favorites.positionX,
-          positionY: favorites.positionY,
-          width: favorites.width,
-          height: favorites.height,
-          createdAt: favorites.createdAt,
-          updatedAt: favorites.updatedAt,
-          groupName: favoriteGroups.name,
-        })
-        .from(favorites)
-        .leftJoin(favoriteGroups, eq(favorites.groupId, favoriteGroups.id))
-        .where(and(eq(favorites.userId, user.id), eq(favorites.isFavorite, true)))
-        .orderBy(favorites.sortOrder)
-        .limit(8),
-      db.select({ value: count() }).from(favorites).where(eq(favorites.userId, user.id)),
-      db
-        .select({ value: count() })
-        .from(favoriteGroups)
-        .where(eq(favoriteGroups.userId, user.id)),
-      db
-        .select({
-          id: auditLogs.id,
-          action: auditLogs.action,
-          resourceType: auditLogs.resourceType,
-          createdAt: auditLogs.createdAt,
-        })
-        .from(auditLogs)
-        .where(eq(auditLogs.userId, user.id))
-        .orderBy(desc(auditLogs.createdAt))
-        .limit(5),
-      isLocalDevelopment ? Promise.resolve(null) : getDockerOverview(),
-    ]);
+    await withDatabaseReadDeadline(
+      Promise.all([
+        dashboard
+          ? db
+              .select()
+              .from(dashboardWidgets)
+              .where(eq(dashboardWidgets.dashboardId, dashboard.id))
+              .orderBy(dashboardWidgets.positionY, dashboardWidgets.positionX)
+          : Promise.resolve([]),
+        db
+          .select({
+            id: favorites.id,
+            userId: favorites.userId,
+            groupId: favorites.groupId,
+            name: favorites.name,
+            description: favorites.description,
+            internalUrl: favorites.internalUrl,
+            externalUrl: favorites.externalUrl,
+            iconType: favorites.iconType,
+            iconValue: favorites.iconValue,
+            tags: favorites.tags,
+            openMode: favorites.openMode,
+            healthCheckEnabled: favorites.healthCheckEnabled,
+            healthCheckUrl: favorites.healthCheckUrl,
+            dockerContainerId: favorites.dockerContainerId,
+            connectorId: favorites.connectorId,
+            sortOrder: favorites.sortOrder,
+            isFavorite: favorites.isFavorite,
+            positionX: favorites.positionX,
+            positionY: favorites.positionY,
+            width: favorites.width,
+            height: favorites.height,
+            createdAt: favorites.createdAt,
+            updatedAt: favorites.updatedAt,
+            groupName: favoriteGroups.name,
+          })
+          .from(favorites)
+          .leftJoin(favoriteGroups, eq(favorites.groupId, favoriteGroups.id))
+          .where(and(eq(favorites.userId, user.id), eq(favorites.isFavorite, true)))
+          .orderBy(favorites.sortOrder)
+          .limit(8),
+        db
+          .select({ value: count() })
+          .from(favorites)
+          .where(eq(favorites.userId, user.id)),
+        db
+          .select({ value: count() })
+          .from(favoriteGroups)
+          .where(eq(favoriteGroups.userId, user.id)),
+        db
+          .select({
+            id: auditLogs.id,
+            action: auditLogs.action,
+            resourceType: auditLogs.resourceType,
+            createdAt: auditLogs.createdAt,
+          })
+          .from(auditLogs)
+          .where(eq(auditLogs.userId, user.id))
+          .orderBy(desc(auditLogs.createdAt))
+          .limit(5),
+        isLocalDevelopment ? Promise.resolve(null) : getDockerOverview(),
+      ]),
+      12_000,
+    );
 
   const favoriteCount = Number(favoriteStats[0]?.value ?? 0);
   const groupCount = Number(groupStats[0]?.value ?? 0);

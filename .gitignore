@@ -15,6 +15,8 @@
 
 # next.js
 /.next/
+/.next-outage-browser-*/
+/tsconfig.outage-browser-*.json
 /out/
 
 # production
