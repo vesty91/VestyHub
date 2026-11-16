@@ -61,6 +61,25 @@ Docker NAS est masqué plutôt que présenté comme un incident.
 
 Le widget historique Diagnostic local reste disponible pour les autres déploiements.
 
+### Alertes locales CPU et RAM
+
+La V2 affiche un panneau **Alertes ressources locales**, sous les cartes CPU/RAM.
+Les seuils sont réglables depuis le navigateur : **70, 75, 80, 85, 90 ou 95 %**.
+Valeurs initiales : **CPU 90 % et RAM 85 %**.
+
+- Une alerte apparaît seulement après **deux relevés réels distincts** atteignant
+  le seuil. Un rafraîchissement manuel qui récupère la même mesure mise en cache
+  n'est jamais compté deux fois.
+- Elle se résout après deux relevés inférieurs d'au moins **5 points** au seuil ;
+  une mesure indisponible ne simule pas un retour à la normale.
+- Le relevé est effectué toutes les 15 secondes lorsque l'onglet est visible ;
+  il est repris à la réouverture de l'onglet.
+- Le réglage du seuil est **temporaire (onglet courant)** : aucun paramètre
+  serveur ou base de données n'est écrit. Une modification du seuil réinitialise
+  les compteurs de confirmation.
+- Pas de notification système, d'arrêt de processus ni d'action automatique.
+  Le panneau est **informatif**, non prévu pour l'astreinte permanente.
+
 ### Processus Windows (Top 5 RAM)
 
 Le dashboard V2 inclut un tableau des 5 processus les plus gourmands en RAM,

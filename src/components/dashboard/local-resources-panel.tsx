@@ -3,7 +3,16 @@
 import { Activity, Cpu, HardDrive, MemoryStick, RefreshCw, Server } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  advanceResourceAlerts,
+  DEFAULT_RESOURCE_THRESHOLDS,
+  initialResourceAlertState,
+  RESOURCE_THRESHOLD_OPTIONS,
+  type ResourceKey,
+} from "@/lib/local-system/alerts";
 import type { LocalResources } from "@/lib/local-system/metrics";
+
+import { LocalThresholdAlerts } from "./local-threshold-alerts";
 
 type Availability = "checking" | "online" | "offline";
 type Services = { app: Availability; database: Availability };
@@ -82,6 +91,18 @@ function Tile({
 
 export function LocalResourcesPanel() {
   const [resources, setResources] = useState<LocalResources | null>(null);
+  const [thresholds, setThresholds] = useState(DEFAULT_RESOURCE_THRESHOLDS);
+  const [alerts, setAlerts] = useState(initialResourceAlertState);
+  const thresholdsRef = useRef(DEFAULT_RESOURCE_THRESHOLDS);
+
+  const changeThreshold = useCallback((resource: ResourceKey, value: number) => {
+    if (!RESOURCE_THRESHOLD_OPTIONS.some((allowed) => allowed === value)) return;
+    const updated = { ...thresholdsRef.current, [resource]: value };
+    thresholdsRef.current = updated;
+    setThresholds(updated);
+    // A changed threshold must not reuse prior samples to raise an alert.
+    setAlerts(initialResourceAlertState());
+  }, []);
   const [services, setServices] = useState<Services>(INITIAL_SERVICES);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
@@ -120,12 +141,16 @@ export function LocalResourcesPanel() {
       }
       const payload = (await resourcesResult.value.json()) as { data?: LocalResources };
       if (!mountedRef.current || controller.signal.aborted) return;
-      if (!payload?.data || !payload.data.cpu || !payload.data.memory) {
+      const sample = payload?.data;
+      if (!sample || !sample.cpu || !sample.memory) {
         setResources(null);
         setError("Réponse du diagnostic Windows invalide.");
         return;
       }
-      setResources(payload.data);
+      setResources(sample);
+      setAlerts((previous) =>
+        advanceResourceAlerts(previous, sample, thresholdsRef.current),
+      );
       setError(null);
     } catch {
       if (mountedRef.current && !controller.signal.aborted) {
@@ -140,12 +165,19 @@ export function LocalResourcesPanel() {
   useEffect(() => {
     mountedRef.current = true;
     const initialTimer = window.setTimeout(() => void refresh(), 0);
-    const timer = window.setInterval(() => void refresh(), INTERVAL_MS);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, INTERVAL_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       mountedRef.current = false;
       controllerRef.current?.abort();
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [refresh]);
 
@@ -244,6 +276,12 @@ export function LocalResourcesPanel() {
           </p>
         </article>
       </div>
+      <LocalThresholdAlerts
+        thresholds={thresholds}
+        state={alerts}
+        metricsAvailable={resources !== null && error === null}
+        onThresholdChange={changeThreshold}
+      />
       <div
         className="text-muted-foreground flex flex-wrap items-center gap-2 text-[11px]"
         aria-live="polite"

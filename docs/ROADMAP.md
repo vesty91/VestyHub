@@ -57,8 +57,11 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       recadrage GridStack et accessibilité au clavier.
 - [ ] **Historique local léger** : CPU/RAM/disque en session navigateur, sans
       nouvelle base ni collecteur permanent.
-- [ ] **Alertes non intrusives** : seuils CPU/RAM configurables, affichage de la
-      mesure source, silence automatique pour les services volontairement désactivés.
+- [x] **Alertes locales non intrusives** : seuils CPU/RAM réglables (session navigateur),
+      confirmation sur deux relevés distincts et réarmement avec hystérésis. Aucun service
+      ne peut être arrêté par cette fonctionnalité.
+- [ ] **Alertes NAS futures** : définir une gestion explicite des services désactivés
+      et des cibles réellement indisponibles, à valider sur staging Synology.
 - [ ] **Favoris robustes** : Playwright CI couvre le CRUD de favoris et les permissions
       inter-utilisateurs ; compléter avec les URL malformées, les raccourcis et l’accessibilité.
 - [ ] **Recherche et navigation** : validation ergonomique des pages Dashboard,
