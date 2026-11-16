@@ -55,8 +55,9 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
 
 - [ ] **Dashboard responsive final** : revue visuelle desktop/tablette/mobile,
       recadrage GridStack et accessibilité au clavier.
-- [ ] **Historique local léger** : CPU/RAM/disque en session navigateur, sans
-      nouvelle base ni collecteur permanent.
+- [x] **Historique local léger** : graphique CPU/RAM sur 5 minutes en mémoire de l'onglet,
+      sans nouvelle base ni collecteur permanent. Les relevés disque sont des valeurs
+      instantanées ; un historique des disques reste optionnel.
 - [x] **Alertes locales non intrusives** : seuils CPU/RAM réglables (session navigateur),
       confirmation sur deux relevés distincts et réarmement avec hystérésis. Aucun service
       ne peut être arrêté par cette fonctionnalité.

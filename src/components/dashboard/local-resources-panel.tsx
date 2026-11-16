@@ -10,7 +10,11 @@ import {
   RESOURCE_THRESHOLD_OPTIONS,
   type ResourceKey,
 } from "@/lib/local-system/alerts";
+import { appendResourceHistory } from "@/lib/local-system/history";
+import type { ResourceHistoryPoint } from "@/lib/local-system/history";
 import type { LocalResources } from "@/lib/local-system/metrics";
+
+import { LocalResourceHistory } from "./local-resource-history";
 
 import { LocalThresholdAlerts } from "./local-threshold-alerts";
 
@@ -91,6 +95,7 @@ function Tile({
 
 export function LocalResourcesPanel() {
   const [resources, setResources] = useState<LocalResources | null>(null);
+  const [history, setHistory] = useState<ResourceHistoryPoint[]>([]);
   const [thresholds, setThresholds] = useState(DEFAULT_RESOURCE_THRESHOLDS);
   const [alerts, setAlerts] = useState(initialResourceAlertState);
   const thresholdsRef = useRef(DEFAULT_RESOURCE_THRESHOLDS);
@@ -148,6 +153,7 @@ export function LocalResourcesPanel() {
         return;
       }
       setResources(sample);
+      setHistory((previous) => appendResourceHistory(previous, sample));
       setAlerts((previous) =>
         advanceResourceAlerts(previous, sample, thresholdsRef.current),
       );
@@ -276,6 +282,7 @@ export function LocalResourcesPanel() {
           </p>
         </article>
       </div>
+      <LocalResourceHistory points={history} />
       <LocalThresholdAlerts
         thresholds={thresholds}
         state={alerts}

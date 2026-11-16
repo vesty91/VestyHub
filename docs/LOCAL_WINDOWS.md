@@ -61,6 +61,19 @@ Docker NAS est masqué plutôt que présenté comme un incident.
 
 Le widget historique Diagnostic local reste disponible pour les autres déploiements.
 
+### Historique CPU / RAM (5 minutes)
+
+Le dashboard affiche un graphique **CPU et RAM** construit uniquement à partir des
+mesures réelles du service Windows `/api/local/resources`. Les relevés restent dans la
+**mémoire de l'onglet** (aucun localStorage, base de données, fichier, conteneur
+ni agent). Le graphique conserve au maximum les cinq dernières minutes et
+64 points, en rejetant les mesures erronées, anciennes ou renvoyées plusieurs
+fois depuis le cache serveur. Il n'émet **aucune requête supplémentaire**.
+
+L'historique est réinitialisé au rechargement de la page ; un onglet fermé ou
+masqué ne collecte pas de données en arrière-plan. Le graphique est purement
+informatif et n'est pas un enregistreur de supervision permanente.
+
 ### Alertes locales CPU et RAM
 
 La V2 affiche un panneau **Alertes ressources locales**, sous les cartes CPU/RAM.
