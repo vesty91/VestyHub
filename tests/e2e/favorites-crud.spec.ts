@@ -62,7 +62,8 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
     { timeout: 20_000 },
   );
   await page.getByRole("button", { name: "Créer le favori" }).click();
-  expect((await favoriteCreation).ok()).toBe(true);
+  // Next.js Server Actions may return HTTP 303 for a successful redirect.
+  expect((await favoriteCreation).status()).toBeLessThan(400);
 
   // The server action may finish while Next.js is still committing the
   // client-side redirect on a busy mobile CI runner.
@@ -87,7 +88,7 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
     { timeout: 20_000 },
   );
   await page.getByRole("button", { name: "Enregistrer les modifications" }).click();
-  expect((await favoriteUpdate).ok()).toBe(true);
+  expect((await favoriteUpdate).status()).toBeLessThan(400);
   await expect(page).toHaveURL(/\/favorites$/, { timeout: 15_000 });
   await page.getByPlaceholder("Rechercher un favori ou un tag…").fill(editedName);
   const editedCard = page.locator("article").filter({ hasText: editedName });
