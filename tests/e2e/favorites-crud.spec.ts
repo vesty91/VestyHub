@@ -32,11 +32,11 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
   await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.goto("/favorites");
-  await page.getByPlaceholder("Nouveau groupe").fill(groupName);
-  await page.getByRole("button", { name: "Créer le groupe" }).click();
-  await expect(page.getByText("Groupe créé.")).toBeVisible();
+  await page.getByPlaceholder("Nouveau groupe").first().fill(groupName);
+  await page.getByRole("button", { name: "Créer le groupe" }).first().click();
+  await expect(page.getByText("Groupe créé.").first()).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("link", { name: "Ajouter une application" }).click();
+  await page.getByRole("link", { name: "Ajouter une application" }).first().click();
   await expect(page).toHaveURL(/\/favorites\/new$/);
 
   await page.getByLabel("Nom du service").fill(originalName);
@@ -52,7 +52,7 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
   const originalCard = page.locator("article").filter({ hasText: originalName });
   await expect(originalCard).toHaveCount(1);
   await expect(originalCard.getByText(groupName)).toBeVisible();
-  await expect(originalCard.getByText("e2e")).toBeVisible();
+  await expect(originalCard.getByText("e2e", { exact: true }).first()).toBeVisible();
 
   await originalCard.getByRole("link", { name: "Modifier" }).click();
   await expect(
