@@ -33,13 +33,22 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
 
   await page.goto("/favorites");
   await page.getByPlaceholder("Nouveau groupe").first().fill(groupName);
+  const groupCreation = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/favorites",
+    { timeout: 20_000 },
+  );
   await page.getByRole("button", { name: "Créer le groupe" }).first().click();
-  await expect(page.getByText("Groupe créé.").first()).toBeVisible({ timeout: 15_000 });
+  expect((await groupCreation).ok()).toBe(true);
 
-  // After the server action revalidates the group directory, navigate to a
-  // fresh form rather than racing a client-side link during React refresh.
+  // Verify persisted group availability on a fresh server-rendered form; do
+  // not rely on a transient action-state success message across RSC refreshes.
   await page.goto("/favorites/new");
   await expect(page).toHaveURL(/\/favorites\/new$/);
+  await expect(
+    page.getByLabel("Groupe").locator("option", { hasText: groupName }),
+  ).toHaveCount(1);
 
   await page.getByLabel("Nom du service").fill(originalName);
   await page.getByLabel("Description").fill("Created by isolated Playwright CI.");

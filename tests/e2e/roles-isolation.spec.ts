@@ -84,13 +84,14 @@ test("USER sees only own favorites and cannot edit an ADMIN favorite", async ({
   expect(allowed.status()).toBe(200);
 
   // The ADMIN fixture ID is deterministic and not owned by this USER.
-  const forbiddenEdit = await page.goto(
-    "/favorites/00000000-0000-4000-8000-00000000a001/edit",
-  );
-  expect(forbiddenEdit?.status()).toBe(404);
+  await page.goto("/favorites/00000000-0000-4000-8000-00000000a001/edit");
+  // Next.js may respond HTTP 200 after streaming a notFound boundary. The
+  // security invariant is that no cross-account data or editing UI renders.
+  await expect(page.getByText(accounts.ADMIN.favorite)).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Enregistrer les modifications" }),
   ).toHaveCount(0);
+  await expect(page.getByLabel("Nom du service")).toHaveCount(0);
 });
 
 test("VIEWER can read own favorites but cannot mutate layouts or create services", async ({
