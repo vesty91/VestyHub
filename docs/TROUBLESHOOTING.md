@@ -18,6 +18,39 @@ docker compose ps
 docker compose logs --tail=100 postgres app
 ```
 
+## PostgreSQL temporairement indisponible dans l'interface
+
+Si une requête de session ou de dashboard échoue et que
+`GET /api/health/ready` répond HTTP **503**, la page d'erreur affiche
+« PostgreSQL est indisponible ».
+
+- Le bouton **Réessayer** est désactivé tant que le contrôle renvoie 503 :
+  il n'y a pas de boucle de rechargement ni de recréation de session.
+- Le navigateur contrôle automatiquement la disponibilité toutes les
+  **15 secondes** lorsque l'onglet est visible. Le bouton **Vérifier PostgreSQL**
+  permet aussi de tester immédiatement.
+- Quand le service répond **200**, le bouton **Reprendre VestyHub** apparaît.
+  Le dashboard est rechargé à la demande ; l'authentification existante est
+  vérifiée normalement. Aucun compte ou cookie n'est supprimé par le contrôle.
+- Si la base est saine mais qu'une autre erreur apparaît, la page présente
+  une erreur générique et laisse le bouton **Réessayer** accessible.
+- Le diagnostic ne retourne **ni SQL, ni identifiants, ni URL de base**.
+
+Sur le poste Windows local, lire uniquement l'état du service :
+
+```bat
+cd /d D:\Dev\VestyHub
+curl.exe -i http://127.0.0.1:3200/api/health/live
+curl.exe -i http://127.0.0.1:3200/api/health/ready
+docker compose --env-file .env.local -f compose.local.yml ps postgres
+docker compose --env-file .env.local -f compose.local.yml logs --tail=50 postgres
+```
+
+Le statut `live=200` et `ready=503` indique une application Next.js
+opérationnelle mais une base indisponible. **Ne pas supprimer le volume**,
+ne pas relancer de seed ni de migrations pour « réparer » une simple panne
+réseau ou un conteneur momentanément arrêté.
+
 ## Le reverse proxy DSM retourne 502
 
 1. Tester `curl http://127.0.0.1:3000/api/health/live` depuis le NAS.

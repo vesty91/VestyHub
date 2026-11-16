@@ -45,7 +45,9 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       pour Docker NAS, DSM et Prometheus/Loki/Alertmanager (3 échecs, 30 s,
       reprise avec sonde unique) ; délais totaux DSM, Docker NAS et monitoring
       vérifiés sur réponses HTTP fragmentées. Reste à vérifier la résilience
-      PostgreSQL et le staging NAS avant de considérer la dégradation comme complète.
+      PostgreSQL (page de récupération avec contrôles de disponibilité, reprise
+      explicite et tests sans arrêt réel du service) et le staging NAS avant
+      de considérer la dégradation comme complète.
 - [ ] **Contrôle dépendances** : audit des bibliothèques runtime, analyse de licences
       et plan de patch avec mise à jour testée. Ne pas appliquer une mise à jour
       majeure sans tests.
