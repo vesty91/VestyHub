@@ -3,6 +3,8 @@ export type CircuitState = "closed" | "open" | "half-open";
 export interface CircuitBreakerOptions {
   failureThreshold?: number;
   cooldownMs?: number;
+  /** Do not trip for permanent input, permission or authentication errors. */
+  shouldTrip?: (error: unknown) => boolean;
 }
 
 export class CircuitOpenError extends Error {
@@ -20,6 +22,7 @@ export class CircuitBreaker {
 
   private readonly failureThreshold: number;
   private readonly cooldownMs: number;
+  private readonly shouldTrip: (error: unknown) => boolean;
 
   constructor(
     private readonly name: string,
@@ -27,6 +30,7 @@ export class CircuitBreaker {
   ) {
     this.failureThreshold = options.failureThreshold ?? 5;
     this.cooldownMs = options.cooldownMs ?? 30_000;
+    this.shouldTrip = options.shouldTrip ?? (() => true);
 
     if (
       !Number.isInteger(this.failureThreshold) ||
@@ -60,10 +64,11 @@ export class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (error) {
-      this.onFailure();
+      if (this.shouldTrip(error)) this.onFailure();
+      else this.onSuccess();
       throw error;
     } finally {
-      this.halfOpenTrialInProgress = false;
+      if (state === "half-open") this.halfOpenTrialInProgress = false;
     }
   }
 

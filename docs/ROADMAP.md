@@ -41,8 +41,11 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       Les rôles sont testés par navigateur et par API sans utiliser les bases réelles.
 - [ ] **Relecture sécurité API** : permissions sur chaque route, limites de requêtes,
       erreurs non bavardes, protections SSRF sur les healthchecks externes.
-- [ ] **Gestion des indisponibilités** : PostgreSQL, proxy Docker et connecteurs
-      doivent se dégrader sans provoquer d'erreur 500 évitable ; retry borné.
+- [ ] **Gestion des indisponibilités** : circuit breaker isolé par connecteur
+      pour Docker NAS, DSM et Prometheus/Loki/Alertmanager (3 échecs, 30 s,
+      reprise avec sonde unique) ; délai total DSM testé. Reste à vérifier
+      PostgreSQL, les réponses HTTP fragmentées des autres connecteurs et le
+      staging NAS avant de considérer la dégradation comme complète.
 - [ ] **Contrôle dépendances** : audit des bibliothèques runtime, analyse de licences
       et plan de patch avec mise à jour testée. Ne pas appliquer une mise à jour
       majeure sans tests.

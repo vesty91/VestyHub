@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ShortTtlCache } from "@/connectors/core/cache";
+import { CircuitBreaker } from "@/connectors/core/circuit-breaker";
 import { fetchWithTimeout } from "@/connectors/core/http";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
@@ -19,6 +20,16 @@ import type {
 } from "./types";
 
 const dockerLogger = logger.child("docker");
+const readCircuit = new CircuitBreaker("Docker NAS read proxy", {
+  failureThreshold: 3,
+  cooldownMs: 30_000,
+  shouldTrip: (error) =>
+    error instanceof TypeError ||
+    (error instanceof Error &&
+      (/timeout/i.test(error.name) ||
+        /timeout/i.test(error.message) ||
+        /Docker API returned HTTP 5[0-9][0-9]/.test(error.message))),
+});
 const overviewCache = new ShortTtlCache<DockerOverview>(5_000);
 const inspectCache = new ShortTtlCache<z.infer<typeof dockerInspectSchema>>(5_000);
 const statsCache = new ShortTtlCache<z.infer<typeof dockerStatsSchema>>(3_000);
@@ -137,15 +148,17 @@ async function dockerGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   const url = dockerUrl(path);
   if (!url) throw new Error("Docker proxy is not configured.");
 
-  const response = await fetchWithTimeout(url, {
-    timeoutMs: 5_000,
-    connectorName: "Docker NAS",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
+  return readCircuit.execute(async () => {
+    const response = await fetchWithTimeout(url, {
+      timeoutMs: 5_000,
+      connectorName: "Docker NAS",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
 
-  if (!response.ok) throw new Error(`Docker API returned HTTP ${response.status}.`);
-  return schema.parse(await response.json());
+    if (!response.ok) throw new Error(`Docker API returned HTTP ${response.status}.`);
+    return schema.parse(await response.json());
+  });
 }
 
 async function dockerControlInfo(): Promise<z.infer<typeof dockerInfoSchema>> {

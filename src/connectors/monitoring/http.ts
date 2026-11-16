@@ -1,7 +1,33 @@
+import { CircuitBreaker } from "@/connectors/core/circuit-breaker";
 import { fetchWithTimeout } from "@/connectors/core/http";
 
 import { MonitoringConnectorError, normalizeMonitoringError } from "./errors";
 import type { MonitoringSource } from "./types";
+
+// One circuit per source: an offline Loki must not block healthy Prometheus.
+// Breakers are process-local; no writes or background probes are scheduled.
+const sourceBreakers: Record<MonitoringSource, CircuitBreaker> = {
+  prometheus: newBreaker("prometheus"),
+  loki: newBreaker("loki"),
+  alertmanager: newBreaker("alertmanager"),
+};
+
+function newBreaker(source: MonitoringSource): CircuitBreaker {
+  return new CircuitBreaker(source, {
+    failureThreshold: 3,
+    cooldownMs: 30_000,
+    shouldTrip: (error) => {
+      const normalized = normalizeMonitoringError(source, error);
+      return (
+        normalized.code === "TIMEOUT" ||
+        normalized.code === "UNREACHABLE" ||
+        (normalized.code === "HTTP_ERROR" &&
+          error instanceof Error &&
+          /HTTP 5[0-9][0-9]/.test(error.message))
+      );
+    },
+  });
+}
 
 interface MonitoringRequestOptions {
   source: MonitoringSource;
@@ -61,24 +87,26 @@ async function monitoringGet({
 
   try {
     const url = buildMonitoringUrl(source, baseUrl, path, searchParams);
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      timeoutMs,
-      connectorName,
-      redirect: "error",
-      cache: "no-store",
-      headers: { Accept: "application/json, text/plain;q=0.9" },
+    return await sourceBreakers[source].execute(async () => {
+      const response = await fetchWithTimeout(url, {
+        method: "GET",
+        timeoutMs,
+        connectorName,
+        redirect: "error",
+        cache: "no-store",
+        headers: { Accept: "application/json, text/plain;q=0.9" },
+      });
+
+      if (!response.ok) {
+        throw new MonitoringConnectorError(
+          source,
+          "HTTP_ERROR",
+          `${connectorName} returned HTTP ${response.status}.`,
+        );
+      }
+
+      return response;
     });
-
-    if (!response.ok) {
-      throw new MonitoringConnectorError(
-        source,
-        "HTTP_ERROR",
-        `${connectorName} returned HTTP ${response.status}.`,
-      );
-    }
-
-    return response;
   } catch (error) {
     throw normalizeMonitoringError(source, error);
   }

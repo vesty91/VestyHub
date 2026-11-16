@@ -1,3 +1,5 @@
+import { CircuitOpenError } from "@/connectors/core/circuit-breaker";
+
 import type { MonitoringErrorCode, MonitoringSource } from "./types";
 
 export class MonitoringConnectorError extends Error {
@@ -17,6 +19,14 @@ export function normalizeMonitoringError(
   error: unknown,
 ): MonitoringConnectorError {
   if (error instanceof MonitoringConnectorError) return error;
+  if (error instanceof CircuitOpenError) {
+    return new MonitoringConnectorError(
+      source,
+      "UNREACHABLE",
+      "La source est temporairement isolée après plusieurs échecs de connexion.",
+      { cause: error },
+    );
+  }
 
   const name = error instanceof Error ? error.name : "";
   const message = error instanceof Error ? error.message : "";

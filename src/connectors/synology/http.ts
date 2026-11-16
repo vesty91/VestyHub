@@ -1,10 +1,24 @@
 import { readFile } from "node:fs/promises";
+
+import { CircuitBreaker, CircuitOpenError } from "@/connectors/core/circuit-breaker";
 import http from "node:http";
 import https from "node:https";
 
 import { SynologyConnectorError, normalizeSynologyError } from "./errors";
 
 const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+const dsmCircuit = new CircuitBreaker("Synology DSM", {
+  failureThreshold: 3,
+  cooldownMs: 30_000,
+  shouldTrip: (error) => {
+    const normalized = normalizeSynologyError(error);
+    return (
+      normalized.code === "TIMEOUT" ||
+      normalized.code === "UNREACHABLE" ||
+      (normalized.code === "HTTP_ERROR" && /HTTP 5[0-9][0-9]/.test(normalized.message))
+    );
+  },
+});
 const caCache = new Map<string, Promise<Buffer>>();
 
 export interface SynologyHttpOptions {
@@ -112,82 +126,101 @@ export async function synologyPostJson({
   const transport = url.protocol === "https:" ? https : http;
 
   try {
-    return await new Promise<unknown>((resolve, reject) => {
-      const request = transport.request(
-        url,
-        {
-          method: "POST",
-          headers: {
-            ...headers,
-            Accept: "application/json",
-            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-            "Content-Length": Buffer.byteLength(body),
-          },
-          ...(url.protocol === "https:"
-            ? {
-                rejectUnauthorized: verifyTls,
-                ...(ca ? { ca } : {}),
+    return await dsmCircuit.execute(
+      () =>
+        new Promise<unknown>((resolve, reject) => {
+          const request = transport.request(
+            url,
+            {
+              method: "POST",
+              headers: {
+                ...headers,
+                Accept: "application/json",
+                "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+                "Content-Length": Buffer.byteLength(body),
+              },
+              ...(url.protocol === "https:"
+                ? {
+                    rejectUnauthorized: verifyTls,
+                    ...(ca ? { ca } : {}),
+                  }
+                : {}),
+            },
+            (response) => {
+              const statusCode = response.statusCode ?? 0;
+              if (statusCode < 200 || statusCode >= 300) {
+                response.resume();
+                reject(
+                  new SynologyConnectorError(
+                    "HTTP_ERROR",
+                    `DSM returned HTTP ${statusCode}.`,
+                  ),
+                );
+                return;
               }
-            : {}),
-        },
-        (response) => {
-          const statusCode = response.statusCode ?? 0;
-          if (statusCode < 200 || statusCode >= 300) {
-            response.resume();
-            reject(
-              new SynologyConnectorError(
-                "HTTP_ERROR",
-                `DSM returned HTTP ${statusCode}.`,
-              ),
-            );
-            return;
-          }
 
-          const chunks: Buffer[] = [];
-          let totalBytes = 0;
-          response.on("data", (chunk: Buffer | string) => {
-            const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-            totalBytes += buffer.length;
-            if (totalBytes > maxResponseBytes) {
-              response.destroy();
-              request.destroy(
-                new SynologyConnectorError(
-                  "INVALID_RESPONSE",
-                  "DSM response exceeded the maximum allowed size.",
-                ),
-              );
-              return;
-            }
-            chunks.push(buffer);
-          });
-          response.on("end", () => {
-            try {
-              const text = Buffer.concat(chunks).toString("utf8");
-              resolve(JSON.parse(text) as unknown);
-            } catch (error) {
-              reject(
-                new SynologyConnectorError(
-                  "INVALID_RESPONSE",
-                  "DSM returned invalid JSON.",
-                  undefined,
-                  { cause: error },
-                ),
-              );
-            }
-          });
-          response.on("error", reject);
-        },
-      );
+              const chunks: Buffer[] = [];
+              let totalBytes = 0;
+              response.on("data", (chunk: Buffer | string) => {
+                const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+                totalBytes += buffer.length;
+                if (totalBytes > maxResponseBytes) {
+                  response.destroy();
+                  request.destroy(
+                    new SynologyConnectorError(
+                      "INVALID_RESPONSE",
+                      "DSM response exceeded the maximum allowed size.",
+                    ),
+                  );
+                  return;
+                }
+                chunks.push(buffer);
+              });
+              response.on("end", () => {
+                try {
+                  const text = Buffer.concat(chunks).toString("utf8");
+                  resolve(JSON.parse(text) as unknown);
+                } catch (error) {
+                  reject(
+                    new SynologyConnectorError(
+                      "INVALID_RESPONSE",
+                      "DSM returned invalid JSON.",
+                      undefined,
+                      { cause: error },
+                    ),
+                  );
+                }
+              });
+              response.on("error", reject);
+            },
+          );
 
-      request.setTimeout(timeoutMs, () => {
-        const error = new Error("Synology request timeout");
-        error.name = "AbortError";
-        request.destroy(error);
-      });
-      request.on("error", reject);
-      request.end(body);
-    });
+          // setTimeout() measures socket inactivity, not the total duration.
+          // This deadline also stops servers that trickle data indefinitely.
+          const deadline = setTimeout(() => {
+            const error = new Error("Synology request deadline exceeded");
+            error.name = "AbortError";
+            request.destroy(error);
+          }, timeoutMs);
+          request.once("close", () => clearTimeout(deadline));
+          request.setTimeout(timeoutMs, () => {
+            const error = new Error("Synology request timeout");
+            error.name = "AbortError";
+            request.destroy(error);
+          });
+          request.on("error", reject);
+          request.end(body);
+        }),
+    );
   } catch (error) {
+    if (error instanceof CircuitOpenError) {
+      throw new SynologyConnectorError(
+        "UNREACHABLE",
+        "Le NAS est temporairement isolé après plusieurs échecs de connexion.",
+        undefined,
+        { cause: error },
+      );
+    }
     throw normalizeSynologyError(error);
   }
 }

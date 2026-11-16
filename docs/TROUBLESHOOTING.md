@@ -66,6 +66,30 @@ Le seed ne remplace pas le mot de passe d'un compte déjà présent.
 
 Cinq échecs dans une fenêtre de quinze minutes déclenchent un blocage de quinze minutes pour la combinaison IP et adresse e-mail. Attendre l'expiration du délai. Le redémarrage de l'application vide également ce limiteur mémoire, mais ne doit pas servir de méthode normale de déblocage.
 
+## Connecteur NAS / monitoring temporairement isolé (circuit breaker)
+
+Pour limiter les délais et requêtes inutiles lorsqu'une source distante est
+durablement en panne, les connecteurs **DSM, Docker NAS lecture seule,
+Prometheus, Loki et Alertmanager** utilisent un circuit breaker en mémoire du
+processus Next.js :
+
+- Après **trois échecs transitoires consécutifs** (réseau, timeout, HTTP 5xx),
+  les nouvelles requêtes sont refusées immédiatement pendant **30 secondes**.
+- Passé ce délai, une **seule requête de reprise** est autorisée simultanément :
+  une réponse valide ferme le circuit et un nouvel échec le rouvre pour 30 s.
+- Les erreurs HTTP 4xx, les identifiants invalides et les réponses de
+  configuration incorrecte **ne déclenchent pas** cette protection.
+- Les connexions sont indépendantes : une panne Loki ne bloque pas Prometheus ;
+  un DSM injoignable ne bloque pas la supervision Windows.
+- Les requêtes DSM possèdent aussi un délai maximal absolu égal à
+  `SYNOLOGY_TIMEOUT_MS`, même lorsque le serveur envoie des données lentement.
+
+Un circuit ouvert **ne redémarre aucun conteneur**, ne modifie aucun NAS et
+n'efface aucune métrique ou volume. Le compteur est temporaire et se
+réinitialise au redémarrage du serveur VestyHub. Le délai d'isolement n'est pas
+une preuve de panne définitive : le prochain contrôle après 30 s peut confirmer
+la reprise.
+
 ## Monitoring et Docker « non configurés »
 
 Une source **non configurée** (variable `PROMETHEUS_URL`, `LOKI_URL`,
