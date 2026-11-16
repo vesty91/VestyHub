@@ -58,7 +58,7 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       nouvelle base ni collecteur permanent.
 - [ ] **Alertes non intrusives** : seuils CPU/RAM configurables, affichage de la
       mesure source, silence automatique pour les services volontairement désactivés.
-- [ ] **Favoris robustes** : tests E2E de CRUD, URL, groupes et raccourcis.
+- [ ] **Favoris robustes** : le scénario Playwright CI crée un groupe et exerce le CRUD des favoris ; vérifier ensuite les URL malformées, les autorisations inter-utilisateurs et les raccourcis.
 - [ ] **Recherche et navigation** : validation ergonomique des pages Dashboard,
       Applications, Docker, NAS, Monitoring et Paramètres.
 - [ ] **Documentation opérateur** : démarrage Windows, récupération de mot de
