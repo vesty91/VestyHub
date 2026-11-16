@@ -8,32 +8,30 @@ import {
   classifyFavoriteHealthStatus,
   type FavoriteHealthResult,
 } from "@/lib/favorites/health";
+import { probeFavoriteHead, type HealthProbePolicy } from "@/lib/favorites/probe";
+import { getEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
 const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" } as const;
-const HEALTH_TIMEOUT_MS = 3000;
 const HEALTH_CONCURRENCY = 6;
 
 type HealthTarget = { id: string; url: string };
 
-async function probeTarget(target: HealthTarget): Promise<FavoriteHealthResult> {
+async function probeTarget(
+  target: HealthTarget,
+  policy: HealthProbePolicy,
+): Promise<FavoriteHealthResult> {
   const startedAt = performance.now();
   const checkedAt = new Date().toISOString();
 
   try {
-    const response = await fetch(target.url, {
-      method: "HEAD",
-      cache: "no-store",
-      redirect: "manual",
-      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
-      headers: { "User-Agent": "VestyHub-Health/1.0" },
-    });
+    const statusCode = await probeFavoriteHead(target.url, policy);
 
     return {
       id: target.id,
-      status: classifyFavoriteHealthStatus(response.status),
-      statusCode: response.status,
+      status: classifyFavoriteHealthStatus(statusCode),
+      statusCode,
       latencyMs: Math.round(performance.now() - startedAt),
       checkedAt,
     };
@@ -48,7 +46,10 @@ async function probeTarget(target: HealthTarget): Promise<FavoriteHealthResult> 
   }
 }
 
-async function probeTargets(targets: HealthTarget[]): Promise<FavoriteHealthResult[]> {
+async function probeTargets(
+  targets: HealthTarget[],
+  policy: HealthProbePolicy,
+): Promise<FavoriteHealthResult[]> {
   const results: FavoriteHealthResult[] = [];
   let cursor = 0;
 
@@ -57,7 +58,7 @@ async function probeTargets(targets: HealthTarget[]): Promise<FavoriteHealthResu
       const target = targets[cursor];
       cursor += 1;
       if (target) {
-        results.push(await probeTarget(target));
+        results.push(await probeTarget(target, policy));
       }
     }
   }
@@ -91,10 +92,16 @@ export async function GET() {
     .orderBy(asc(favorites.sortOrder))
     .limit(96);
 
+  const env = getEnv();
+  const policy: HealthProbePolicy = {
+    allowedHosts: env.HEALTHCHECK_ALLOWED_HOSTS,
+    allowedCidrs: env.HEALTHCHECK_ALLOWED_CIDRS,
+  };
+
   const targets = storedTargets.flatMap((target) =>
     target.url ? [{ id: target.id, url: target.url }] : [],
   );
-  const items = await probeTargets(targets);
+  const items = await probeTargets(targets, policy);
 
   return NextResponse.json({ version: 1, items }, { headers: NO_STORE_HEADERS });
 }
