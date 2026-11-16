@@ -139,3 +139,68 @@ jobs:
             test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  backup_restore_drill:
+    name: PostgreSQL isolated backup/restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: vestyhub_ci
+          POSTGRES_PASSWORD: ci-only-dummy-password
+          POSTGRES_DB: vestyhub_backup_ci
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U vestyhub_ci -d vestyhub_backup_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CI: "true"
+      BACKUP_DRILL_ONLY: "1"
+      NODE_ENV: test
+      APP_NAME: VestyHub Backup CI
+      APP_URL: http://127.0.0.1:3000
+      APP_PORT: "3000"
+      APP_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      AUTH_SECRET: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      DATABASE_URL: postgresql://vestyhub_ci:ci-only-dummy-password@127.0.0.1:5433/vestyhub_backup_ci
+      PGHOST: 127.0.0.1
+      PGPORT: "5433"
+      PGUSER: vestyhub_ci
+      PGDATABASE: vestyhub_backup_ci
+      POSTGRES_PASSWORD: ci-only-dummy-password
+      AUTH_LOCAL_ENABLED: "true"
+      AUTHENTIK_ENABLED: "false"
+      DOCKER_CONTROL_ENABLED: "false"
+      DOCKER_LOGS_ENABLED: "false"
+      SYNOLOGY_ENABLED: "false"
+      SYNOLOGY_VERIFY_TLS: "true"
+      DEMO_MODE: "false"
+      SEED_ADMIN_EMAIL: backup-ci@vestyhub.local
+      SEED_ADMIN_PASSWORD: ci-only-backup-restore-password
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - name: Verify PostgreSQL logical backup and isolated restore
+        shell: bash
+        run: bash scripts/ci-backup-restore-drill.sh
