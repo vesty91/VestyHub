@@ -36,7 +36,9 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
   await page.getByRole("button", { name: "Créer le groupe" }).first().click();
   await expect(page.getByText("Groupe créé.").first()).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("link", { name: "Ajouter une application" }).first().click();
+  // After the server action revalidates the group directory, navigate to a
+  // fresh form rather than racing a client-side link during React refresh.
+  await page.goto("/favorites/new");
   await expect(page).toHaveURL(/\/favorites\/new$/);
 
   await page.getByLabel("Nom du service").fill(originalName);
