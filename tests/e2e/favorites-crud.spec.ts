@@ -55,9 +55,18 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
   await page.getByLabel("URL interne").fill("https://app.example.test/");
   await page.getByLabel("Groupe").selectOption({ label: groupName });
   await page.getByLabel("Tags").fill("e2e, validation");
+  const favoriteCreation = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/favorites/new",
+    { timeout: 20_000 },
+  );
   await page.getByRole("button", { name: "Créer le favori" }).click();
+  expect((await favoriteCreation).ok()).toBe(true);
 
-  await expect(page).toHaveURL(/\/favorites$/);
+  // The server action may finish while Next.js is still committing the
+  // client-side redirect on a busy mobile CI runner.
+  await expect(page).toHaveURL(/\/favorites$/, { timeout: 15_000 });
   const search = page.getByPlaceholder("Rechercher un favori ou un tag…");
   await search.fill(originalName);
   const originalCard = page.locator("article").filter({ hasText: originalName });
@@ -71,9 +80,15 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
   ).toBeVisible();
   await page.getByLabel("Nom du service").fill(editedName);
   await page.getByLabel("URL interne").fill("https://new.example.test/");
+  const favoriteUpdate = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/favorites\/[0-9a-f-]+\/edit$/.test(new URL(response.url()).pathname),
+    { timeout: 20_000 },
+  );
   await page.getByRole("button", { name: "Enregistrer les modifications" }).click();
-
-  await expect(page).toHaveURL(/\/favorites$/);
+  expect((await favoriteUpdate).ok()).toBe(true);
+  await expect(page).toHaveURL(/\/favorites$/, { timeout: 15_000 });
   await page.getByPlaceholder("Rechercher un favori ou un tag…").fill(editedName);
   const editedCard = page.locator("article").filter({ hasText: editedName });
   await expect(editedCard).toHaveCount(1);
