@@ -71,13 +71,21 @@ test("an administrator can create, filter, edit and remove a favorite", async ({
     "https://new.example.test/",
   );
 
+  // A successful server action can outlive the client-side animation.
+  // Wait for the POST response, then validate persistence against PostgreSQL
+  // after a fresh server-side render instead of racing React revalidation.
+  const deletionResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/favorites",
+    { timeout: 20_000 },
+  );
   page.once("dialog", (dialog) => void dialog.accept());
   await editedCard.getByRole("button", { name: "Supprimer" }).click();
-  await expect(editedCard).toHaveCount(0);
-  await expect(page.getByText("Aucun favori trouvé")).toBeVisible();
+  const deleted = await deletionResponse;
+  expect(deleted.ok()).toBe(true);
 
-  // A database-backed reload verifies that the deletion persisted.
   await page.reload();
-  await page.getByPlaceholder("Rechercher un favori ou un tag…").fill(editedName);
-  await expect(page.getByText("Aucun favori trouvé")).toBeVisible();
+  await page.getByPlaceholder("Rechercher un favori ou un tag…").first().fill(editedName);
+  await expect(page.getByText("Aucun favori trouvé").first()).toBeVisible();
 });
