@@ -107,6 +107,9 @@ jobs:
       SEED_ADMIN_PASSWORD: ci-only-strong-admin-password
       E2E_ADMIN_EMAIL: e2e-admin@vestyhub.local
       E2E_ADMIN_PASSWORD: ci-only-strong-admin-password
+      E2E_RBAC_SEED: "1"
+      E2E_USER_PASSWORD: ci-only-user-password-strong
+      E2E_VIEWER_PASSWORD: ci-only-viewer-password-strong
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
 
     steps:
@@ -126,6 +129,8 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm db:migrate
       - run: pnpm db:seed
+      - name: Seed disposable role-isolation fixtures
+        run: pnpm exec tsx scripts/ci-seed-rbac.ts
       - run: pnpm build
       - run: pnpm test:e2e
 

@@ -36,8 +36,9 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
 - [x] Tests Vitest, ESLint, Prettier, TypeScript et build automatisés sur GitHub.
 - [x] Vérification syntaxique des Compose NAS et locaux par CI.
 - [x] Supervision Windows locale CPU/RAM/disques et processus en lecture seule.
-- [ ] **Tests E2E CI** : démarrer PostgreSQL jetable, appliquer migrations/seed,
-      lancer Next.js et tester connexion, RBAC, favoris et dashboard.
+- [x] **Tests E2E CI sur PostgreSQL jetable** : migrations, comptes fictifs ADMIN/USER/VIEWER,
+      connexion, isolation des favoris, permissions d’édition et dashboard en desktop/mobile.
+      Les rôles sont testés par navigateur et par API sans utiliser les bases réelles.
 - [ ] **Relecture sécurité API** : permissions sur chaque route, limites de requêtes,
       erreurs non bavardes, protections SSRF sur les healthchecks externes.
 - [ ] **Gestion des indisponibilités** : PostgreSQL, proxy Docker et connecteurs
@@ -58,7 +59,8 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       nouvelle base ni collecteur permanent.
 - [ ] **Alertes non intrusives** : seuils CPU/RAM configurables, affichage de la
       mesure source, silence automatique pour les services volontairement désactivés.
-- [ ] **Favoris robustes** : le scénario Playwright CI crée un groupe et exerce le CRUD des favoris ; vérifier ensuite les URL malformées, les autorisations inter-utilisateurs et les raccourcis.
+- [ ] **Favoris robustes** : Playwright CI couvre le CRUD de favoris et les permissions
+      inter-utilisateurs ; compléter avec les URL malformées, les raccourcis et l’accessibilité.
 - [ ] **Recherche et navigation** : validation ergonomique des pages Dashboard,
       Applications, Docker, NAS, Monitoring et Paramètres.
 - [ ] **Documentation opérateur** : démarrage Windows, récupération de mot de
