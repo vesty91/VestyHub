@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { ShortTtlCache } from "@/connectors/core/cache";
 import { CircuitBreaker } from "@/connectors/core/circuit-breaker";
-import { fetchWithTimeout } from "@/connectors/core/http";
+import { fetchWithTimeout, fetchWithTimeoutResult } from "@/connectors/core/http";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 
@@ -149,15 +149,22 @@ async function dockerGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   if (!url) throw new Error("Docker proxy is not configured.");
 
   return readCircuit.execute(async () => {
-    const response = await fetchWithTimeout(url, {
-      timeoutMs: 5_000,
-      connectorName: "Docker NAS",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
-
-    if (!response.ok) throw new Error(`Docker API returned HTTP ${response.status}.`);
-    return schema.parse(await response.json());
+    return fetchWithTimeoutResult(
+      url,
+      {
+        timeoutMs: 5_000,
+        connectorName: "Docker NAS",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+      async (response) => {
+        if (!response.ok) {
+          void response.body?.cancel();
+          throw new Error(`Docker API returned HTTP ${response.status}.`);
+        }
+        return schema.parse(await response.json());
+      },
+    );
   });
 }
 
@@ -165,16 +172,22 @@ async function dockerControlInfo(): Promise<z.infer<typeof dockerInfoSchema>> {
   const url = dockerControlUrl("info");
   if (!url) throw new Error("Docker control proxy is not configured.");
 
-  const response = await fetchWithTimeout(url, {
-    timeoutMs: 5_000,
-    connectorName: "Docker NAS control",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    throw new Error(`Docker control proxy returned HTTP ${response.status}.`);
-  }
-  return dockerInfoSchema.parse(await response.json());
+  return fetchWithTimeoutResult(
+    url,
+    {
+      timeoutMs: 5_000,
+      connectorName: "Docker NAS control",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    },
+    async (response) => {
+      if (!response.ok) {
+        void response.body?.cancel();
+        throw new Error(`Docker control proxy returned HTTP ${response.status}.`);
+      }
+      return dockerInfoSchema.parse(await response.json());
+    },
+  );
 }
 
 async function dockerPost(path: string): Promise<void> {

@@ -66,6 +66,30 @@ Le seed ne remplace pas le mot de passe d'un compte déjà présent.
 
 Cinq échecs dans une fenêtre de quinze minutes déclenchent un blocage de quinze minutes pour la combinaison IP et adresse e-mail. Attendre l'expiration du délai. Le redémarrage de l'application vide également ce limiteur mémoire, mais ne doit pas servir de méthode normale de déblocage.
 
+## Réponse HTTP incomplète (Docker NAS et monitoring)
+
+Les clients HTTP Docker NAS et monitoring (Prometheus, Loki, Alertmanager)
+appliquent **un seul délai maximal couvrant les en-têtes et la lecture
+intégrale du corps JSON/texte**.
+
+- Docker NAS lecture seule (et vérification d'identité du proxy de contrôle) :
+  **5 secondes** maximum, y compris si le proxy commence à envoyer du JSON
+  sans jamais l'achever.
+- Monitoring : les délais configurés pour chaque source couvrent désormais
+  également la réception des données après les en-têtes.
+- Une réponse qui envoie lentement des fragments est interrompue au même
+  titre qu'un serveur qui ne répond pas. Le timeout est classé comme tel
+  (notamment `TIMEOUT` dans le monitoring), et peut alimenter la protection
+  du circuit breaker.
+- Une annulation demandée par l'appelant est distincte d'un dépassement
+  de délai ; les réponses rapides et complètes restent acceptées.
+- Les actions Docker POST sans lecture de corps continuent de vérifier leur
+  réponse HTTP ; elles ne sont pas modifiées par cette amélioration.
+
+Les tests utilisent uniquement des serveurs HTTP **éphémères sur
+`127.0.0.1`**, sans connexion à un NAS réel ni changement de
+configuration Docker.
+
 ## Connecteur NAS / monitoring temporairement isolé (circuit breaker)
 
 Pour limiter les délais et requêtes inutiles lorsqu'une source distante est
