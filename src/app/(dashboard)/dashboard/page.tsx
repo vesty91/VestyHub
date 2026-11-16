@@ -127,9 +127,15 @@ export default async function DashboardPage() {
       value: docker?.available ? docker.counters.total : "—",
       detail: docker?.available
         ? `${docker.counters.running} en cours`
-        : "Proxy indisponible",
+        : docker?.configured === false
+          ? "Source non configurée"
+          : "Proxy indisponible",
       icon: <Container className="size-4" />,
-      tone: docker?.available ? ("success" as const) : ("warning" as const),
+      tone: docker?.available
+        ? ("success" as const)
+        : docker?.configured === false
+          ? ("neutral" as const)
+          : ("warning" as const),
     },
     {
       label: "Widgets",
@@ -391,7 +397,14 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="border-warning/20 bg-warning/[0.06] rounded-xl border p-4">
-                <StatusDot tone="warning" label="Docker indisponible" />
+                <StatusDot
+                  tone={docker.configured === false ? "neutral" : "warning"}
+                  label={
+                    docker.configured === false
+                      ? "Docker non configuré"
+                      : "Docker indisponible"
+                  }
+                />
                 <p className="text-muted-foreground mt-2 text-sm">{docker.error}</p>
               </div>
             )}

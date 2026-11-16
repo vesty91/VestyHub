@@ -150,9 +150,12 @@ export function DockerOverviewClient({
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => void refresh(), 15_000);
+    if (overview.configured === false) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 15_000);
     return () => window.clearInterval(timer);
-  }, [refresh]);
+  }, [refresh, overview.configured]);
 
   const containers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -208,15 +211,34 @@ export function DockerOverviewClient({
   );
 
   if (!overview.available || !overview.engine) {
+    const notConfigured = overview.configured === false;
     return (
-      <Card className="border-rose-400/15 bg-rose-400/[0.04]">
-        <CardContent className="py-14 text-center">
-          <CircleAlert className="mx-auto size-9 text-rose-300" />
-          <p className="mt-4 font-medium">Docker du NAS indisponible</p>
-          <p className="mt-2 text-sm text-zinc-500">{overview.error}</p>
-          <Button className="mt-5" onClick={() => void refresh()} disabled={refreshing}>
-            <RefreshCw className={refreshing ? "animate-spin" : ""} /> Actualiser
-          </Button>
+      <Card
+        className={
+          notConfigured
+            ? "border-white/10 bg-white/[0.02]"
+            : "border-rose-400/15 bg-rose-400/[0.04]"
+        }
+      >
+        <CardContent className="py-14 text-center" role="status">
+          {notConfigured ? (
+            <Server className="mx-auto size-9 text-zinc-400" aria-hidden="true" />
+          ) : (
+            <CircleAlert className="mx-auto size-9 text-rose-300" aria-hidden="true" />
+          )}
+          <p className="mt-4 font-medium">
+            {notConfigured ? "Docker du NAS non configuré" : "Docker du NAS indisponible"}
+          </p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {notConfigured
+              ? "Aucun proxy Docker NAS n’est déclaré. Cette source est facultative ; ce n’est pas une panne."
+              : overview.error}
+          </p>
+          {!notConfigured ? (
+            <Button className="mt-5" onClick={() => void refresh()} disabled={refreshing}>
+              <RefreshCw className={refreshing ? "animate-spin" : ""} /> Actualiser
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     );

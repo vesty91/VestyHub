@@ -69,8 +69,10 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
       Applications, Docker, NAS, Monitoring et Paramètres.
 - [ ] **Documentation opérateur** : démarrage Windows, récupération de mot de
       passe, diagnostics, gestion des erreurs, journaux, sauvegardes.
-- [ ] **Connecteurs** : confirmer les contrats d'erreur, timeouts, données
-      indisponibles, mode lecture seule et aucun secret dans le navigateur.
+- [ ] **Connecteurs** : distinction « non configuré » / panne implémentée
+      pour Prometheus, Loki, Alertmanager et Docker NAS, avec tests ;
+      compléter les contrats d'erreur, timeouts, réponses partielles et
+      l'inspection en staging, sans exposer de secrets au navigateur.
 
 ### P2 — intégration Synology (bloquée sans NAS accessible)
 

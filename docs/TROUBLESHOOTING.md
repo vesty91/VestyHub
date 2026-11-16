@@ -66,6 +66,24 @@ Le seed ne remplace pas le mot de passe d'un compte déjà présent.
 
 Cinq échecs dans une fenêtre de quinze minutes déclenchent un blocage de quinze minutes pour la combinaison IP et adresse e-mail. Attendre l'expiration du délai. Le redémarrage de l'application vide également ce limiteur mémoire, mais ne doit pas servir de méthode normale de déblocage.
 
+## Monitoring et Docker « non configurés »
+
+Une source **non configurée** (variable `PROMETHEUS_URL`, `LOKI_URL`,
+`ALERTMANAGER_URL` ou `DOCKER_PROXY_URL` absente) est volontairement facultative :
+
+- aucune alerte de panne ni avertissement « données partielles » n'est créé pour
+  ce seul motif ;
+- le widget de monitoring affiche « Monitoring non configuré » si les trois
+  sources sont absentes, et n'effectue pas de polling en continu dans cet état ;
+- les nombres d'alertes restent « — » tant qu'Alertmanager n'a pas répondu :
+  **zéro** signifierait une valeur réellement mesurée, et non une absence de données ;
+- la page Docker affiche un état neutre « Docker du NAS non configuré » et
+  n'interroge pas le réseau.
+
+Pour activer une source, renseigner son URL interne dans la configuration,
+**redémarrer l'application** et vérifier le résultat. Les sources configurées
+mais injoignables conservent un signalement d'erreur et les timeouts habituels.
+
 ## Docker apparaît indisponible dans le dashboard
 
 ```bash

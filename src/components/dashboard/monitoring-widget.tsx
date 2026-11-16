@@ -1,8 +1,12 @@
 "use client";
 
 import { Activity, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import {
+  hasConfiguredMonitoringSource,
+  monitoringAvailability,
+} from "@/connectors/monitoring/availability";
 import type { MonitoringOverview, MonitoringSource } from "@/connectors/monitoring/types";
 import type { MonitoringWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
 
@@ -22,8 +26,10 @@ export function MonitoringWidget({
   const [overview, setOverview] = useState<MonitoringOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const allSourcesUnconfigured = useRef(false);
 
   useEffect(() => {
+    allSourcesUnconfigured.current = false;
     let active = true;
     let controller: AbortController | null = null;
 
@@ -51,6 +57,9 @@ export function MonitoringWidget({
         }
 
         if (active) {
+          allSourcesUnconfigured.current = !hasConfiguredMonitoringSource(
+            payload.data.sources,
+          );
           setOverview(payload.data);
           setError(null);
         }
@@ -74,7 +83,13 @@ export function MonitoringWidget({
     }
 
     void loadOverview();
-    const timer = window.setInterval(() => void loadOverview(), REFRESH_INTERVAL_MS);
+    const timer = window.setInterval(() => {
+      // Avoid polling an intentionally disabled stack, or while the browser
+      // tab is hidden. The server configuration is loaded on page refresh.
+      if (document.visibilityState === "visible" && !allSourcesUnconfigured.current) {
+        void loadOverview();
+      }
+    }, REFRESH_INTERVAL_MS);
 
     return () => {
       active = false;
@@ -103,7 +118,20 @@ export function MonitoringWidget({
         />
       </div>
 
-      {error && !overview ? (
+      {overview && !hasConfiguredMonitoringSource(overview.sources) ? (
+        <div
+          className="border-border/60 bg-background/30 grid flex-1 place-items-center rounded-xl border p-4 text-center"
+          role="status"
+        >
+          <div>
+            <p className="text-sm font-medium">Monitoring non configuré</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Aucune source Prometheus, Loki ou Alertmanager n’est activée. Ce n’est pas
+              une panne. Configure une source pour activer les métriques.
+            </p>
+          </div>
+        </div>
+      ) : error && !overview ? (
         <div className="border-warning/20 bg-warning/[0.06] grid flex-1 place-items-center rounded-xl border p-4 text-center">
           <div>
             <p className="text-warning text-sm font-medium">Monitoring indisponible</p>
@@ -124,13 +152,13 @@ export function MonitoringWidget({
               <div className="border-border/60 bg-background/35 rounded-xl border px-3 py-2.5">
                 <p className="text-[11px] text-zinc-500">Alertes actives</p>
                 <p className="mt-1 text-lg font-semibold">
-                  {overview?.alerts?.firing ?? 0}
+                  {overview?.alerts?.firing ?? "—"}
                 </p>
               </div>
               <div className="border-border/60 bg-background/35 rounded-xl border px-3 py-2.5">
                 <p className="text-[11px] text-zinc-500">En attente</p>
                 <p className="mt-1 text-lg font-semibold">
-                  {overview?.alerts?.pending ?? 0}
+                  {overview?.alerts?.pending ?? "—"}
                 </p>
               </div>
             </div>
@@ -145,7 +173,11 @@ export function MonitoringWidget({
                 >
                   <span
                     className={`size-1.5 rounded-full ${
-                      source.available ? "bg-emerald-400" : "bg-red-400"
+                      monitoringAvailability(source) === "available"
+                        ? "bg-emerald-400"
+                        : monitoringAvailability(source) === "unreachable"
+                          ? "bg-red-400"
+                          : "bg-zinc-500"
                     }`}
                     aria-hidden="true"
                   />

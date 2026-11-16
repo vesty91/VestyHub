@@ -336,6 +336,19 @@ async function enrichContainer(
 
 async function loadDockerOverview(): Promise<DockerOverview> {
   const fetchedAt = new Date().toISOString();
+  if (!getEnv().DOCKER_PROXY_URL) {
+    // No connection attempt or warning for an optional, disabled NAS source.
+    return {
+      configured: false,
+      available: false,
+      partial: false,
+      fetchedAt,
+      counters: { total: 0, running: 0, paused: 0, stopped: 0, unhealthy: 0 },
+      containers: [],
+      warnings: [],
+      error: "Source Docker NAS non configurée.",
+    };
+  }
   try {
     const [version, info, rawContainers] = await Promise.all([
       dockerGet("version", dockerVersionSchema),
@@ -346,6 +359,7 @@ async function loadDockerOverview(): Promise<DockerOverview> {
     const expected = getEnv().DOCKER_EXPECTED_HOSTNAME;
     if (expected && info.Name.toLowerCase() !== expected.toLowerCase()) {
       return {
+        configured: true,
         available: false,
         partial: false,
         fetchedAt,
@@ -362,6 +376,7 @@ async function loadDockerOverview(): Promise<DockerOverview> {
     );
 
     return {
+      configured: true,
       available: true,
       partial: warnings.length > 0,
       fetchedAt,
@@ -391,6 +406,7 @@ async function loadDockerOverview(): Promise<DockerOverview> {
   } catch (error) {
     dockerLogger.warn("Unable to read NAS Docker overview.", { error });
     return {
+      configured: true,
       available: false,
       partial: false,
       fetchedAt,
