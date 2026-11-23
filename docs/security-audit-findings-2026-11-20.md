@@ -13,14 +13,14 @@
 
 ## Critical findings requiring triage
 
-| Package | Finding | Patched version reported | Advisory |
-| --- | --- | --- | --- |
-| next | Windows-hosted unauthenticated RCE | >=16.3.3 | [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36) |
-| next | AVIF image optimization RCE | >=16.3.3 | [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4) |
-| next | `next/og` ImageResponse RCE | >=16.3.6 | [GHSA-vcvr-r3jv-pc5j](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j) |
-| proxy-addr | IPv4-mapped IPv6 trust subnet spoofing (via `shadcn` > MCP SDK > Express) | >=2.0.8 | [GHSA-jqcg-44mw-7w3h](https://github.com/advisories/GHSA-jqcg-44mw-7w3h) |
-| next | SVG image optimization RCE | >=16.4.1 | [GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw) |
-| next | `use cache` typed-array RCE | >=16.4.1 | [GHSA-673q-mjm6-r5xr](https://github.com/advisories/GHSA-673q-mjm6-r5xr) |
+| Package    | Finding                                                                   | Patched version reported | Advisory                                                                 |
+| ---------- | ------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------ |
+| next       | Windows-hosted unauthenticated RCE                                        | >=16.3.3                 | [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36) |
+| next       | AVIF image optimization RCE                                               | >=16.3.3                 | [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4) |
+| next       | `next/og` ImageResponse RCE                                               | >=16.3.6                 | [GHSA-vcvr-r3jv-pc5j](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j) |
+| proxy-addr | IPv4-mapped IPv6 trust subnet spoofing (via `shadcn` > MCP SDK > Express) | >=2.0.8                  | [GHSA-jqcg-44mw-7w3h](https://github.com/advisories/GHSA-jqcg-44mw-7w3h) |
+| next       | SVG image optimization RCE                                                | >=16.4.1                 | [GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw) |
+| next       | `use cache` typed-array RCE                                               | >=16.4.1                 | [GHSA-673q-mjm6-r5xr](https://github.com/advisories/GHSA-673q-mjm6-r5xr) |
 
 The audited `package.json` pins `next: 16.2.12` and `eslint-config-next: 16.2.12`. The advisories and versions above are **reported by the audit**, not independently verified against a newer registry state. Whether each affected feature is reachable in this deployment has **not** been established. Do not interpret this as proof of exploitation.
 
