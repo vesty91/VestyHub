@@ -175,7 +175,7 @@ export default async function DashboardPage() {
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
               <span className="bg-success size-1.5 rounded-full" />
-              {isLocalWindows ? "Dashboard local V2" : "Phase 3K · v0.3.0"}
+              {isLocalWindows ? "Dashboard local V2" : "VestyHub · v0.4.0"}
             </Badge>
             <span className="text-muted-foreground text-xs">
               Dashboard personnalisable

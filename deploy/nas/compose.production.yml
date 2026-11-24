@@ -75,7 +75,7 @@ services:
         required: true
     env_file:
       - .env
-    image: vestyhub:phase3k-nas
+    image: vestyhub:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     networks:
       default: null
       docker_proxy: null
@@ -171,7 +171,7 @@ services:
         required: true
     env_file:
       - .env
-    image: vestyhub-tools:phase3g-nas
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     networks:
       default: null
     restart: "no"
@@ -308,7 +308,7 @@ services:
         required: true
     env_file:
       - .env
-    image: vestyhub-tools:phase3g-nas
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     networks:
       default: null
     restart: "no"
