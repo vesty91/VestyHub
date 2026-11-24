@@ -14,19 +14,9 @@ d'administration dangereux par défaut ; valider tout changement avant déploiem
 
 ## État du code et des PR
 
-La branche `main` n'inclut **pas** automatiquement les changements en brouillon.
-Les travaux actuels forment une pile de PR dépendantes :
+La release v0.4.0 a été publiée le 24 novembre 2026. La PR #45 a intégré les PR #20–44 dans main, avec 239 tests unitaires, Playwright desktop/mobile, sauvegarde/restauration PostgreSQL et audit de sécurité validés. Les futures améliorations v0.5.0 partent de main actualisé sur une branche dédiée. Ne pas reprendre les anciennes branches empilées.
 
-| PR                                                 | Branche                             | Sujet                                                | Dépend de |
-| -------------------------------------------------- | ----------------------------------- | ---------------------------------------------------- | --------- |
-| [#20](https://github.com/vesty91/VestyHub/pull/20) | `fix/security-hardening-2026-11-15` | Durcissement NAS, permissions, contrôle Docker et CI | `main`    |
-| [#21](https://github.com/vesty91/VestyHub/pull/21) | `feat/windows-local-development`    | Environnement PostgreSQL Windows local isolé         | #20       |
-| [#22](https://github.com/vesty91/VestyHub/pull/22) | `feat/dashboard-local-health`       | Diagnostic des services et page d'erreur             | #21       |
-| [#23](https://github.com/vesty91/VestyHub/pull/23) | `feat/dashboard-local-v2`           | CPU, RAM, disques et services Windows                | #22       |
-| [#24](https://github.com/vesty91/VestyHub/pull/24) | `feat/windows-process-supervision`  | Top 5 des processus Windows par RAM                  | #23       |
-
-**Ne fusionner aucune de ces PR dans le désordre.** Les PR restent en brouillon
-tant que les prérequis d'intégration et de production ne sont pas remplis.
+Le déploiement NAS reste à qualifier. Une alerte modérée minimatch subsiste; aucune alerte critique ou élevée lors du dernier audit de release.
 
 ## Jalons prioritaires
 
@@ -51,8 +41,7 @@ tant que les prérequis d'intégration et de production ne sont pas remplis.
 - [ ] **Contrôle dépendances** : audit des bibliothèques runtime, analyse de licences
       et plan de patch avec mise à jour testée. Ne pas appliquer une mise à jour
       majeure sans tests.
-- [ ] **Sauvegarde/restauration PostgreSQL** : exercice reproductible sur volume
-      de test distinct ; checksum et vérification du compte restauré.
+- [x] **Sauvegarde/restauration PostgreSQL en CI** : exercice isolé réussi ; validation staging NAS encore nécessaire.
 - [ ] **Bilan de configuration** : HTTPS, proxy, variables et secrets revus avant
       tout déploiement sur le NAS.
 
