@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ErrorPage from "./error";
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -65,17 +66,10 @@ describe("application error page", () => {
   });
 
   it("detects recovery during scheduled checks without resetting the page", async () => {
-    let onTick: (() => void) | undefined;
+    vi.useFakeTimers();
     const reset = vi.fn();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
-    vi.spyOn(window, "setInterval").mockImplementation((handler, timeout) => {
-      if (timeout === 15_000 && typeof handler === "function") {
-        onTick = handler as () => void;
-      }
-      return 1 as unknown as ReturnType<typeof setInterval>;
-    });
-    vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({ status: 503 })
@@ -83,11 +77,14 @@ describe("application error page", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<ErrorPage error={new Error("database failure")} reset={reset} />);
-    expect(await screen.findByText("PostgreSQL est indisponible")).toBeInTheDocument();
-    await waitFor(() => expect(onTick).toBeDefined());
-
-    onTick?.();
-    expect(await screen.findByText("PostgreSQL répond de nouveau")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("PostgreSQL est indisponible")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(screen.getByText("PostgreSQL répond de nouveau")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(reset).not.toHaveBeenCalled();
   });
