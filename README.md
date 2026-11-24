@@ -1,215 +1,139 @@
 # VestyHub
 
-VestyHub est un centre de contrôle homelab auto-hébergé pour centraliser les favoris, Docker, le NAS Synology et les sources de monitoring dans une interface sécurisée.
+[![Version](https://img.shields.io/badge/version-v0.4.0-blue)](https://github.com/vesty91/VestyHub/releases/tag/v0.4.0) [![CI](https://github.com/vesty91/VestyHub/actions/workflows/ci.yml/badge.svg)](https://github.com/vesty91/VestyHub/actions/workflows/ci.yml) [![Audit](https://github.com/vesty91/VestyHub/actions/workflows/dependency-audit.yml/badge.svg)](https://github.com/vesty91/VestyHub/actions/workflows/dependency-audit.yml)
 
-Le socle documenté couvre les Phases 1 à 3F, avec des développements complémentaires sur branches de PR (sécurité, développement Windows isolé, dashboard local et supervision des processus). Les fondations des Phases 1 et 2 sont conservées : authentification locale, sessions persistantes, PostgreSQL, contrôle d'accès, favoris, déploiement Docker et opérations d'infrastructure en lecture seule. Voir la [feuille de route de livraison](docs/ROADMAP.md) pour distinguer les fonctions développées de celles qui restent à valider.
+**Centre de contrôle homelab auto-hébergé** : favoris, Docker, NAS Synology, monitoring et diagnostic Windows réunis dans une interface sécurisée.
 
-## Fonctionnalités actuelles
+La version **v0.4.0**, publiée le 24 novembre 2026, consolide les développements précédents via la PR #45. Le code et les tests sont validés ; le déploiement sur le NAS cible reste à qualifier.
 
-### Fondation et sécurité
+[Release v0.4.0](https://github.com/vesty91/VestyHub/releases/tag/v0.4.0) · [Notes de livraison](docs/RELEASE-v0.4.0.md) · [Feuille de route](docs/ROADMAP.md)
 
-- Connexion locale avec mot de passe Argon2id.
-- Sessions opaques de 7 jours : jeton aléatoire côté cookie et empreinte SHA-256 en PostgreSQL.
-- Cookie `HttpOnly`, `SameSite=Lax` et `Secure` lorsque `APP_URL` utilise HTTPS.
-- Rôles `ADMIN`, `USER` et `VIEWER`.
-- Limitation des tentatives de connexion et journal d'audit.
-- PostgreSQL 17 avec Drizzle ORM et migrations explicites.
-- Healthchecks `/api/health/live` et `/api/health/ready`.
-- Conteneur applicatif durci et Docker socket jamais monté directement dans l'application.
+## Fonctionnalités
 
-### Favoris
+| Module        | Capacités                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| Dashboard     | Widgets GridStack, disposition persistée, affichage responsive, thèmes                         |
+| Favoris       | Groupes, tags, recherche, épinglage, URL LAN/WAN, CRUD, vérification de disponibilité protégée |
+| Docker        | Inventaire, santé, CPU/RAM, logs selon configuration, contrôle administrateur optionnel        |
+| Synology      | DSM WebAPI, SNMPv3, stockage, disques, RAID, métriques                                         |
+| Monitoring    | Prometheus, Loki, Alertmanager, graphiques ECharts                                             |
+| Windows local | CPU, RAM, stockage, services, top 5 processus RAM, historique 5 minutes, seuils                |
+| Résilience    | Timeouts HTTP, circuit breakers, distinction panne/non-configuré, reprise PostgreSQL           |
 
-- Groupes, recherche, tags et épinglage.
-- URL LAN/WAN et choix du mode d'ouverture.
-- Création, modification et suppression.
-- Sélecteur de plus de 80 icônes Lucide avec recherche, catégories et navigation clavier.
+### Sécurité et authentification
 
-### Phase 3A — Docker NAS en lecture seule
+- Argon2id, sessions opaques de 7 jours et empreinte SHA-256 stockée dans PostgreSQL.
+- Cookies HttpOnly, SameSite=Lax et Secure sous HTTPS.
+- Rôles ADMIN, USER et VIEWER, limitation des connexions et journal d'audit.
+- Contrôle des URL de favoris contre les destinations interdites ; isolation des droits testée.
+- Docker socket jamais monté directement dans l'application ; contrôle Docker désactivé par défaut, réservé aux administrateurs et soumis à un proxy d'écriture approprié.
+- Conteneur applicatif durci, secrets hors dépôt, DSM et monitoring en lecture seule.
+- Dernier audit de la v0.4.0 : 0 critique, 0 élevée, 1 modérée (minimatch), 0 faible. Voir le [rapport de sécurité](docs/release-v0.4.0-security.md). Ce résultat est daté et ne garantit pas l'absence de nouvelles alertes.
 
-- Connexion au moteur Docker du NAS via proxy dédié.
-- Normalisation des conteneurs et métriques utiles.
-- Santé, uptime, redémarrages, CPU et mémoire.
-- Dashboard Docker réel et API authentifiée.
-- Aucune opération start/stop/restart exposée.
+### Dashboard et interface
 
-### Phase 3B — Fondation UI Obsidian
+- Cinq thèmes : Obsidian, Midnight, Graphite, Carbon Gold et Light.
+- Widgets déplaçables et redimensionnables sur desktop, grille responsive et sauvegarde authentifiée.
+- Historique local CPU/RAM limité à cinq minutes dans l'onglet ; seuils configurables et confirmation sur mesures distinctes.
+- Top 5 des processus Windows en lecture seule, disponible uniquement en développement local Windows.
+- Les connecteurs non configurés ne sont pas présentés comme des incidents.
 
-- Cinq thèmes persistants : Obsidian, Midnight, Graphite, Carbon Gold et Light.
-- Primitives VestyHub réutilisables.
-- Sélecteur de thème accessible.
-- Dashboard et shell global basés sur les tokens sémantiques du thème.
+## Stack technique
 
-### Phase 3C — Monitoring réel
+| Couche         | Technologies                                                        |
+| -------------- | ------------------------------------------------------------------- |
+| Frontend       | Next.js 16.4.6, React 19.2.4, TypeScript, Tailwind CSS 4, shadcn/ui |
+| Données        | PostgreSQL 17, Drizzle ORM, Zod                                     |
+| Interface      | GridStack, ECharts, Lucide, Zustand, TanStack Query                 |
+| Infrastructure | Docker Compose, DSM, SNMPv3, Prometheus, Loki, Alloy, Alertmanager  |
+| Qualité        | pnpm 11.18.0, ESLint, Prettier, Vitest, Playwright, GitHub Actions  |
 
-- Prometheus en lecture seule avec catalogue de métriques borné.
-- Loki avec recherche limitée et requêtes LogQL construites côté serveur.
-- Alertmanager en lecture seule.
-- Graphiques ECharts, état des sources, logs et alertes.
-- Périodes bornées `1h`, `6h`, `24h` et `7d`.
+## Démarrage local Windows
 
-### Phase 3D — Synology DSM
+Prérequis : Node.js 22+ (Node 24 utilisé en CI), Corepack/pnpm et Docker Desktop démarré pour PostgreSQL. Utiliser un environnement de développement dédié, jamais la base de production.
 
-- Connecteur DSM WebAPI serveur.
-- Vue NAS réelle et API authentifiée.
-- Gestion typée des erreurs, timeouts et validation TLS.
-- Aucun secret DSM retourné au navigateur.
+Dans CMD, à la racine du dépôt :
 
-### Phase 3E — Synology SNMPv3
+```bat
+node scripts\setup-local-env.mjs
+pnpm install --frozen-lockfile
+docker compose --env-file .env.local -f compose.local.yml config --quiet
+scripts\start-local.cmd
+```
 
-- Collecte SNMPv3 via `snmp_exporter` et Prometheus.
-- Mode hybride DSM + SNMP.
-- Stockage, disques, RAID et métriques matérielles Synology.
-- AuthPriv avec secrets conservés hors du dépôt.
+- Application : http://127.0.0.1:3200
+- PostgreSQL local : 127.0.0.1:15432
+- Projet Compose : vestyhub-windows-local
 
-### Phase 3F — Dashboard GridStack
+Le script de démarrage applique les migrations et le seed sur la base locale. Consulter [Windows local](docs/LOCAL_WINDOWS.md) avant la première exécution. Ne jamais publier le contenu de .env.local.
 
-- Widgets déplaçables et redimensionnables sur desktop.
-- Disposition persistée dans PostgreSQL.
-- Grille responsive 6 colonnes desktop, 3 colonnes tablette et 1 colonne mobile.
-- Sauvegarde batch authentifiée et validée avec Zod.
-- La disposition mobile ne remplace pas accidentellement la disposition desktop.
+## Installation Docker (nouvelle instance)
 
-Voir [Phase 3F — GridStack](docs/PHASE3F_GRIDSTACK_DASHBOARD.md).
-
-## Prérequis
-
-- Node.js 22 ou une version compatible avec `package.json`.
-- pnpm 11 via Corepack.
-- Docker Engine et Docker Compose v2 pour le déploiement recommandé.
-
-## Nouvelle installation Docker
+Sur un hôte Linux dédié, depuis un checkout de la version souhaitée :
 
 ```bash
 cp .env.example .env
-# Renseigner les secrets et mots de passe.
-docker compose config
-docker compose build --no-cache
-docker compose up -d --remove-orphans
-```
-
-Vérification :
-
-```bash
+# Configurer les secrets, URL, mots de passe et paramètres de l'instance.
+docker compose config --quiet
+docker compose build
+docker compose up -d
 docker compose ps -a
-docker compose logs --tail=100 migrate app postgres
-curl -fsS http://127.0.0.1:3000/api/health/live
-curl -fsS http://127.0.0.1:3000/api/health/ready
 ```
 
-État attendu pour le socle principal :
+Ne pas écraser un fichier .env existant. Vérifier que le projet Compose ne désigne pas une instance existante avant le démarrage. Le profil monitoring ajoute les services de collecte.
 
-- `postgres` : healthy ;
-- `migrate` : exited avec le code 0 ;
-- `app` : healthy ;
-- `docker-socket-proxy` : healthy.
+### Administrateur initial
 
-Le profil `monitoring` ajoute Prometheus et les services de collecte configurés dans `docker-compose.yml`.
-
-## Mise à jour Docker du dashboard
-
-Après une modification applicative validée :
-
-```bash
-docker compose build app
-docker compose up -d --no-deps app
-docker compose ps
-```
-
-Puis vérifier `/api/health/ready` et le comportement visuel du dashboard.
-
-Lorsqu'une phase ajoute une migration SQL, exécuter également le service `migrate` conformément à la documentation de la phase concernée.
-
-## Création du compte administrateur
-
-Le seed reste volontaire et n'est jamais exécuté automatiquement.
-
-1. Renseigner dans `.env` :
-
-```env
-SEED_ADMIN_EMAIL=admin@vestyhub.local
-SEED_ADMIN_PASSWORD=un-mot-de-passe-long-et-unique
-```
-
-2. Exécuter :
+Configurer SEED_ADMIN_EMAIL et SEED_ADMIN_PASSWORD dans .env avec un mot de passe unique, puis lancer volontairement :
 
 ```bash
 docker compose --profile seed run --rm seed
 ```
 
-3. Ouvrir l'URL configurée dans `APP_URL` et se connecter avec ce compte.
+Le seed ne remplace pas le mot de passe d'un compte existant.
 
-Si le compte existe déjà, le seed ne remplace pas silencieusement son mot de passe.
-
-## Développement local
+### Vérification
 
 ```bash
-corepack enable
-pnpm install --frozen-lockfile
-cp .env.example .env.local
-pnpm db:migrate
-pnpm dev
+curl -fsS http://127.0.0.1:3000/api/health/live
+curl -fsS http://127.0.0.1:3000/api/health/ready
+docker compose logs --tail=100 migrate app postgres
 ```
 
-## Validation
+Adapter le port au manifeste utilisé. PostgreSQL et app doivent être healthy ; migrate doit sortir avec le code 0.
 
-Validation standard :
+## NAS, reverse proxy et mises à jour
 
-```bash
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test:unit
-pnpm build
-```
+Les images de la release sont à construire depuis le tag v0.4.0 : vestyhub:v0.4.0 et vestyhub-tools:v0.4.0. Le tag est configurable via VESTYHUB_IMAGE_TAG.
 
-Commande agrégée :
+Le Compose standard publie par défaut sur 127.0.0.1:3000. Le manifeste NAS publie sur VESTYHUB_BIND_IP (loopback par défaut), port 3001. Pour un reverse proxy externe, choisir explicitement une adresse accessible et filtrée ; ne pas exposer PostgreSQL ou le Docker socket. APP_URL doit correspondre à l'URL HTTPS publique.
+
+**Avant toute mise à jour d'une instance existante :** vérifier le projet Compose, les volumes, les images, les secrets, les migrations, le dump PostgreSQL et sa restauration isolée. Conserver les anciennes images et une procédure de retour arrière. Ne jamais utiliser down --volumes pour une mise à jour.
+
+Le manifeste NAS et son script de déploiement nécessitent une qualification spécifique sur le NAS cible ; ne pas les exécuter aveuglément.
+
+## Tests et validation
 
 ```bash
 pnpm check
+pnpm audit --prod
 ```
 
-## Reverse proxy Synology DSM
-
-Le port applicatif est publié uniquement en loopback :
-
-```text
-127.0.0.1:3000 -> app:3000
-```
-
-Dans DSM :
-
-- source : HTTPS, domaine public, port 443 ;
-- destination : HTTP, `127.0.0.1`, port 3000 ;
-- certificat valide associé au domaine ;
-- `APP_URL` doit correspondre exactement à l'URL HTTPS publique.
-
-## Sécurité Docker
-
-Le conteneur principal ne monte jamais `/var/run/docker.sock`. Un proxy séparé autorise uniquement les routes de lecture nécessaires. `POST=0` et les opérations de contrôle Docker restent désactivées.
-
-Les connecteurs NAS et monitoring sont eux aussi conçus en lecture seule depuis l'interface VestyHub.
+La CI de la PR #45 a validé 239 tests unitaires (60 fichiers), le build, Playwright desktop/mobile, les manifestes NAS, la sauvegarde/restauration et la reprise PostgreSQL sur des instances jetables. Les tests E2E doivent utiliser une base jetable, jamais une base réelle.
 
 ## Documentation
 
-- [Feuille de route, priorités et critères de livraison](docs/ROADMAP.md)
-- [Windows 11 — développement local isolé](docs/LOCAL_WINDOWS.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Authentification](docs/AUTHENTICATION.md)
-- [Favoris](docs/FAVORITES.md)
-- [Sécurité](docs/SECURITY.md)
-- [Docker](docs/DOCKER.md)
-- [Synology](docs/SYNOLOGY.md)
-- [Phase 3B — UI Obsidian](docs/PHASE3B_OBSIDIAN_UI.md)
-- [Phase 3C — Monitoring](docs/PHASE3C_MONITORING_OBSERVABILITY.md)
-- [Phase 3D — Synology NAS](docs/PHASE3D_SYNOLOGY_NAS_OBSERVABILITY.md)
-- [Phase 3E — Synology SNMP](docs/PHASE3E_SYNOLOGY_SNMP_OBSERVABILITY.md)
-- [Phase 3F — Dashboard GridStack](docs/PHASE3F_GRIDSTACK_DASHBOARD.md)
-- [Sauvegarde et restauration](docs/BACKUP_RESTORE.md)
-- [Dépannage](docs/TROUBLESHOOTING.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Développement](docs/DEVELOPMENT.md) · [Windows local](docs/LOCAL_WINDOWS.md)
+- [Authentification](docs/AUTHENTICATION.md) · [Sécurité](docs/SECURITY.md) · [Favoris](docs/FAVORITES.md)
+- [Docker](docs/DOCKER.md) · [Synology](docs/SYNOLOGY.md) · [Monitoring](docs/PHASE3C_MONITORING_OBSERVABILITY.md)
+- [Dashboard GridStack](docs/PHASE3F_GRIDSTACK_DASHBOARD.md) · [SNMP](docs/PHASE3E_SYNOLOGY_SNMP_OBSERVABILITY.md) · [UI Obsidian](docs/PHASE3B_OBSIDIAN_UI.md)
+- [Sauvegarde/restauration](docs/BACKUP_RESTORE.md) · [Dépannage](docs/TROUBLESHOOTING.md)
+- [Sécurité v0.4.0](docs/release-v0.4.0-security.md) · [Release](docs/RELEASE-v0.4.0.md) · [Roadmap](docs/ROADMAP.md)
 
-## Limites actuelles
+## Suite du projet — v0.5.0
 
-- Authentik/OIDC n'est pas encore branché à l'interface utilisateur.
-- Les opérations Docker restent volontairement en lecture seule.
-- Les extensions du catalogue de widgets sont en développement sur des PR successives ; leur déploiement sur le NAS n'est pas validé.
-- Les tests d'intégration réels sur Synology, le staging et la restauration contrôlée restent à effectuer avant de déclarer le projet prêt pour la production.
+Priorités : qualifier les images et le staging NAS, renforcer l'observabilité et l'ergonomie, traiter l'alerte modérée résiduelle et poursuivre les tests de résilience. Authentik/OIDC n'est pas encore intégré à l'interface. Le contrôle Docker réel doit être qualifié avant activation. La v0.4.0 est publiée, mais la validation sur le NAS cible n'est pas acquise.
+
+---
+
+**Restor-PC · VestyHub**
