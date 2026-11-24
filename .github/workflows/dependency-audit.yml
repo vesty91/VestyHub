@@ -1,0 +1,74 @@
+name: Dependency security audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Runtime dependency audit (critical gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Audit production dependency graph
+        shell: bash
+        run: |
+          set +e
+          pnpm audit --prod --json > dependency-audit.json 2> dependency-audit-error.txt
+          audit_status=$?
+          set -e
+          # Audit exit code 1 can mean advisories; require valid structured data
+          # before deciding whether the run passed the critical security gate.
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          let report;
+          try {
+            report = JSON.parse(readFileSync('dependency-audit.json', 'utf8'));
+          } catch {
+            console.error('Audit service returned no valid JSON report.');
+            process.exit(2);
+          }
+          const counts = report?.metadata?.vulnerabilities;
+          if (!counts || !Number.isInteger(counts.critical) || counts.critical < 0) {
+            console.error('Audit report is missing the critical vulnerability count.');
+            process.exit(2);
+          }
+          const summary = [
+            '## Production dependency audit',
+            '',
+            'Command: `pnpm audit --prod --json`',
+            '',
+            `Critical: **${counts.critical}**`,
+            `High: **${counts.high ?? 'unknown'}**`,
+            '',
+            'Critical advisories block this PR. Lower severities remain report-only pending triage.',
+          ].join('\n');
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+          if (counts.critical > 0) {
+            console.error(`Critical runtime dependency advisories: ${counts.critical}`);
+            process.exit(1);
+          }
+          NODE
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-dependency-audit
+          path: |
+            dependency-audit.json
+            dependency-audit-error.txt
+          if-no-files-found: warn
+          retention-days: 14

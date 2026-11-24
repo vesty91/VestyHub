@@ -1,4 +1,5 @@
 import { ShortTtlCache } from "@/connectors/core/cache";
+import { unavailableSourceWarning } from "@/connectors/monitoring/availability";
 import {
   getActiveAlerts,
   getAlertmanagerStatus,
@@ -78,11 +79,8 @@ async function loadMonitoringOverview(
       }
     });
   } else {
-    warnings.push({
-      source: "prometheus",
-      code: prometheusStatus.errorCode ?? "UNREACHABLE",
-      message: publicMonitoringErrorMessage(prometheusStatus.errorCode ?? "UNREACHABLE"),
-    });
+    const warning = unavailableSourceWarning(prometheusStatus);
+    if (warning) warnings.push(warning);
   }
 
   let alerts = null;
@@ -93,21 +91,13 @@ async function loadMonitoringOverview(
       warnings.push(warningForError("alertmanager", error));
     }
   } else {
-    warnings.push({
-      source: "alertmanager",
-      code: alertmanagerStatus.errorCode ?? "UNREACHABLE",
-      message: publicMonitoringErrorMessage(
-        alertmanagerStatus.errorCode ?? "UNREACHABLE",
-      ),
-    });
+    const warning = unavailableSourceWarning(alertmanagerStatus);
+    if (warning) warnings.push(warning);
   }
 
   if (!lokiStatus.available) {
-    warnings.push({
-      source: "loki",
-      code: lokiStatus.errorCode ?? "UNREACHABLE",
-      message: publicMonitoringErrorMessage(lokiStatus.errorCode ?? "UNREACHABLE"),
-    });
+    const warning = unavailableSourceWarning(lokiStatus);
+    if (warning) warnings.push(warning);
   }
 
   return {

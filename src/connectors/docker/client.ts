@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { ShortTtlCache } from "@/connectors/core/cache";
-import { fetchWithTimeout } from "@/connectors/core/http";
+import { CircuitBreaker } from "@/connectors/core/circuit-breaker";
+import { fetchWithTimeout, fetchWithTimeoutResult } from "@/connectors/core/http";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 
@@ -19,6 +20,16 @@ import type {
 } from "./types";
 
 const dockerLogger = logger.child("docker");
+const readCircuit = new CircuitBreaker("Docker NAS read proxy", {
+  failureThreshold: 3,
+  cooldownMs: 30_000,
+  shouldTrip: (error) =>
+    error instanceof TypeError ||
+    (error instanceof Error &&
+      (/timeout/i.test(error.name) ||
+        /timeout/i.test(error.message) ||
+        /Docker API returned HTTP 5[0-9][0-9]/.test(error.message))),
+});
 const overviewCache = new ShortTtlCache<DockerOverview>(5_000);
 const inspectCache = new ShortTtlCache<z.infer<typeof dockerInspectSchema>>(5_000);
 const statsCache = new ShortTtlCache<z.infer<typeof dockerStatsSchema>>(3_000);
@@ -137,15 +148,46 @@ async function dockerGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   const url = dockerUrl(path);
   if (!url) throw new Error("Docker proxy is not configured.");
 
-  const response = await fetchWithTimeout(url, {
-    timeoutMs: 5_000,
-    connectorName: "Docker NAS",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
+  return readCircuit.execute(async () => {
+    return fetchWithTimeoutResult(
+      url,
+      {
+        timeoutMs: 5_000,
+        connectorName: "Docker NAS",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+      async (response) => {
+        if (!response.ok) {
+          void response.body?.cancel();
+          throw new Error(`Docker API returned HTTP ${response.status}.`);
+        }
+        return schema.parse(await response.json());
+      },
+    );
   });
+}
 
-  if (!response.ok) throw new Error(`Docker API returned HTTP ${response.status}.`);
-  return schema.parse(await response.json());
+async function dockerControlInfo(): Promise<z.infer<typeof dockerInfoSchema>> {
+  const url = dockerControlUrl("info");
+  if (!url) throw new Error("Docker control proxy is not configured.");
+
+  return fetchWithTimeoutResult(
+    url,
+    {
+      timeoutMs: 5_000,
+      connectorName: "Docker NAS control",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    },
+    async (response) => {
+      if (!response.ok) {
+        void response.body?.cancel();
+        throw new Error(`Docker control proxy returned HTTP ${response.status}.`);
+      }
+      return dockerInfoSchema.parse(await response.json());
+    },
+  );
 }
 
 async function dockerPost(path: string): Promise<void> {
@@ -320,6 +362,19 @@ async function enrichContainer(
 
 async function loadDockerOverview(): Promise<DockerOverview> {
   const fetchedAt = new Date().toISOString();
+  if (!getEnv().DOCKER_PROXY_URL) {
+    // No connection attempt or warning for an optional, disabled NAS source.
+    return {
+      configured: false,
+      available: false,
+      partial: false,
+      fetchedAt,
+      counters: { total: 0, running: 0, paused: 0, stopped: 0, unhealthy: 0 },
+      containers: [],
+      warnings: [],
+      error: "Source Docker NAS non configurée.",
+    };
+  }
   try {
     const [version, info, rawContainers] = await Promise.all([
       dockerGet("version", dockerVersionSchema),
@@ -330,6 +385,7 @@ async function loadDockerOverview(): Promise<DockerOverview> {
     const expected = getEnv().DOCKER_EXPECTED_HOSTNAME;
     if (expected && info.Name.toLowerCase() !== expected.toLowerCase()) {
       return {
+        configured: true,
         available: false,
         partial: false,
         fetchedAt,
@@ -346,6 +402,7 @@ async function loadDockerOverview(): Promise<DockerOverview> {
     );
 
     return {
+      configured: true,
       available: true,
       partial: warnings.length > 0,
       fetchedAt,
@@ -375,6 +432,7 @@ async function loadDockerOverview(): Promise<DockerOverview> {
   } catch (error) {
     dockerLogger.warn("Unable to read NAS Docker overview.", { error });
     return {
+      configured: true,
       available: false,
       partial: false,
       fetchedAt,
@@ -394,8 +452,23 @@ export async function controlDockerContainer(
   containerId: string,
   action: DockerContainerAction,
 ): Promise<void> {
-  if (!getEnv().DOCKER_CONTROL_ENABLED) {
+  const env = getEnv();
+  if (!env.DOCKER_CONTROL_ENABLED) {
     throw new Error("Docker control is disabled.");
+  }
+  // Fail closed: the read proxy and the write proxy must both identify as
+  // the explicitly configured NAS engine before any mutating Docker request.
+  const expected = env.DOCKER_EXPECTED_HOSTNAME?.trim().toLowerCase();
+  if (!expected) throw new Error("Docker expected hostname is not configured.");
+  const [readHost, writeHost] = await Promise.all([
+    dockerGet("info", dockerInfoSchema),
+    dockerControlInfo(),
+  ]);
+  if (
+    readHost.Name.trim().toLowerCase() !== expected ||
+    writeHost.Name.trim().toLowerCase() !== expected
+  ) {
+    throw new Error("Docker engine identity mismatch.");
   }
 
   const containers = await dockerGet(
@@ -409,7 +482,7 @@ export async function controlDockerContainer(
     `containers/${encodeURIComponent(target.Id)}/json`,
     dockerInspectSchema,
   );
-  if (isProtectedVestyHubContainer(inspect.Config.Labels)) {
+  if (isProtectedVestyHubContainer(inspect.Config.Labels, target.Names)) {
     throw new Error("Protected VestyHub container.");
   }
 

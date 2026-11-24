@@ -72,7 +72,7 @@ services:
     build:
       <<: *app-build
       target: tools
-    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     command: ["./node_modules/.bin/tsx", "src/db/migrate.ts"]
     restart: "no"
     environment: *app-environment
@@ -88,7 +88,7 @@ services:
     build:
       <<: *app-build
       target: runner
-    image: vestyhub:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    image: vestyhub:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     restart: unless-stopped
     environment: *app-environment
     depends_on:
@@ -128,7 +128,7 @@ services:
     build:
       <<: *app-build
       target: tools
-    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     command: ["./node_modules/.bin/tsx", "src/db/seed.ts"]
     profiles: ["seed"]
     restart: "no"
@@ -208,7 +208,7 @@ services:
       EXEC: "0"
       GRPC: "0"
       IMAGES: "0"
-      INFO: "0"
+      INFO: "1"
       NETWORKS: "0"
       NODES: "0"
       PING: "1"

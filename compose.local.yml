@@ -1,0 +1,32 @@
+# VestyHub — Windows development PostgreSQL only.
+# Never run the full production Docker stack on this workstation.
+name: vestyhub-windows-local
+
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    # Reuse the built-in bridge; existing Docker networks exhaust IPAM pools.
+    network_mode: bridge
+    restart: "no"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - vestyhub_windows_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+
+volumes:
+  vestyhub_windows_dev_data:

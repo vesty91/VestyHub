@@ -33,10 +33,24 @@ describe("docker control", () => {
     ).toBe(true);
     expect(
       isProtectedVestyHubContainer({
+        "com.docker.compose.project": "vestyhub-nas-deploy",
+        "com.docker.compose.service": "migrate",
+      }),
+    ).toBe(true);
+    expect(
+      isProtectedVestyHubContainer({
+        "com.docker.compose.project": "vestyhub-docker-proxy",
+        "com.docker.compose.service": "vestyhub-docker-proxy",
+      }),
+    ).toBe(true);
+    expect(
+      isProtectedVestyHubContainer({
         "com.docker.compose.project": "wiki",
         "com.docker.compose.service": "app",
       }),
     ).toBe(false);
+    expect(isProtectedVestyHubContainer({}, ["/vestyhub-manual-app"])).toBe(true);
+    expect(isProtectedVestyHubContainer({ "vestyhub.protected": "true" })).toBe(true);
   });
 
   it("adds a bounded grace period to stop and restart", () => {

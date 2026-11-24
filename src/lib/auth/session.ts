@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
+import { withDatabaseReadDeadline } from "@/lib/database-read-deadline";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 import { assertServerOnly } from "@/lib/security/assert-server";
@@ -60,25 +61,27 @@ export async function getCurrentSession(): Promise<AuthSession | null> {
   }
 
   const tokenHash = hashSessionToken(token);
-  const [row] = await db
-    .select({
-      expires: sessions.expires,
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      image: users.image,
-    })
-    .from(sessions)
-    .innerJoin(users, eq(sessions.userId, users.id))
-    .where(
-      and(
-        eq(sessions.sessionToken, tokenHash),
-        gt(sessions.expires, new Date()),
-        eq(users.isActive, true),
-      ),
-    )
-    .limit(1);
+  const [row] = await withDatabaseReadDeadline(
+    db
+      .select({
+        expires: sessions.expires,
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        image: users.image,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(
+        and(
+          eq(sessions.sessionToken, tokenHash),
+          gt(sessions.expires, new Date()),
+          eq(users.isActive, true),
+        ),
+      )
+      .limit(1),
+  );
 
   if (!row) {
     return null;

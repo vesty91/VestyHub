@@ -1,7 +1,33 @@
-import { fetchWithTimeout } from "@/connectors/core/http";
+import { CircuitBreaker } from "@/connectors/core/circuit-breaker";
+import { fetchWithTimeoutResult } from "@/connectors/core/http";
 
 import { MonitoringConnectorError, normalizeMonitoringError } from "./errors";
 import type { MonitoringSource } from "./types";
+
+// Separate circuits: an offline Loki never blocks a healthy Prometheus.
+// State is process-local; there are no background probes or server writes.
+const sourceBreakers: Record<MonitoringSource, CircuitBreaker> = {
+  prometheus: newBreaker("prometheus"),
+  loki: newBreaker("loki"),
+  alertmanager: newBreaker("alertmanager"),
+};
+
+function newBreaker(source: MonitoringSource): CircuitBreaker {
+  return new CircuitBreaker(source, {
+    failureThreshold: 3,
+    cooldownMs: 30_000,
+    shouldTrip: (error) => {
+      const normalized = normalizeMonitoringError(source, error);
+      return (
+        normalized.code === "TIMEOUT" ||
+        normalized.code === "UNREACHABLE" ||
+        (normalized.code === "HTTP_ERROR" &&
+          error instanceof Error &&
+          /HTTP 5[0-9][0-9]/.test(error.message))
+      );
+    },
+  });
+}
 
 interface MonitoringRequestOptions {
   source: MonitoringSource;
@@ -43,14 +69,17 @@ function buildMonitoringUrl(
   return url;
 }
 
-async function monitoringGet({
-  source,
-  connectorName,
-  baseUrl,
-  path,
-  timeoutMs,
-  searchParams,
-}: MonitoringRequestOptions): Promise<Response> {
+async function monitoringGet<T>(
+  {
+    source,
+    connectorName,
+    baseUrl,
+    path,
+    timeoutMs,
+    searchParams,
+  }: MonitoringRequestOptions,
+  read: (response: Response) => Promise<T>,
+): Promise<T> {
   if (!baseUrl) {
     throw new MonitoringConnectorError(
       source,
@@ -61,48 +90,41 @@ async function monitoringGet({
 
   try {
     const url = buildMonitoringUrl(source, baseUrl, path, searchParams);
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      timeoutMs,
-      connectorName,
-      redirect: "error",
-      cache: "no-store",
-      headers: { Accept: "application/json, text/plain;q=0.9" },
-    });
-
-    if (!response.ok) {
-      throw new MonitoringConnectorError(
-        source,
-        "HTTP_ERROR",
-        `${connectorName} returned HTTP ${response.status}.`,
-      );
-    }
-
-    return response;
+    // The circuit breaker must observe failures during body consumption,
+    // not only errors while the remote server sends HTTP headers.
+    return await sourceBreakers[source].execute(() =>
+      fetchWithTimeoutResult(
+        url,
+        {
+          method: "GET",
+          timeoutMs,
+          connectorName,
+          redirect: "error",
+          cache: "no-store",
+          headers: { Accept: "application/json, text/plain;q=0.9" },
+        },
+        async (response) => {
+          if (!response.ok) {
+            void response.body?.cancel();
+            throw new MonitoringConnectorError(
+              source,
+              "HTTP_ERROR",
+              `${connectorName} returned HTTP ${response.status}.`,
+            );
+          }
+          return read(response);
+        },
+      ),
+    );
   } catch (error) {
     throw normalizeMonitoringError(source, error);
   }
 }
 
-export async function monitoringGetJson(
-  options: MonitoringRequestOptions,
-): Promise<unknown> {
-  const response = await monitoringGet(options);
-  try {
-    return await response.json();
-  } catch (error) {
-    throw new MonitoringConnectorError(
-      options.source,
-      "INVALID_RESPONSE",
-      `${options.connectorName} returned invalid JSON.`,
-      { cause: error },
-    );
-  }
+export function monitoringGetJson(options: MonitoringRequestOptions): Promise<unknown> {
+  return monitoringGet(options, (response) => response.json());
 }
 
-export async function monitoringGetText(
-  options: MonitoringRequestOptions,
-): Promise<string> {
-  const response = await monitoringGet(options);
-  return response.text();
+export function monitoringGetText(options: MonitoringRequestOptions): Promise<string> {
+  return monitoringGet(options, (response) => response.text());
 }

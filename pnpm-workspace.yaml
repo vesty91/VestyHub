@@ -6,3 +6,8 @@ allowBuilds:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+overrides:
+  ajv>fast-uri: 3.1.9
+  minimatch@10>brace-expansion: 5.1.0
+  socks>ip-address: 10.7.6

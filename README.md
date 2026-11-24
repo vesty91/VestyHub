@@ -2,7 +2,7 @@
 
 VestyHub est un centre de contrôle homelab auto-hébergé pour centraliser les favoris, Docker, le NAS Synology et les sources de monitoring dans une interface sécurisée.
 
-Le projet est actuellement en **Phase 3F**. Les fondations durcies des Phases 1 et 2 sont conservées : authentification locale, sessions persistantes, PostgreSQL, contrôle d'accès, favoris, déploiement Docker et opérations d'infrastructure en lecture seule.
+Le socle documenté couvre les Phases 1 à 3F, avec des développements complémentaires sur branches de PR (sécurité, développement Windows isolé, dashboard local et supervision des processus). Les fondations des Phases 1 et 2 sont conservées : authentification locale, sessions persistantes, PostgreSQL, contrôle d'accès, favoris, déploiement Docker et opérations d'infrastructure en lecture seule. Voir la [feuille de route de livraison](docs/ROADMAP.md) pour distinguer les fonctions développées de celles qui restent à valider.
 
 ## Fonctionnalités actuelles
 
@@ -191,6 +191,8 @@ Les connecteurs NAS et monitoring sont eux aussi conçus en lecture seule depuis
 
 ## Documentation
 
+- [Feuille de route, priorités et critères de livraison](docs/ROADMAP.md)
+- [Windows 11 — développement local isolé](docs/LOCAL_WINDOWS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Authentification](docs/AUTHENTICATION.md)
 - [Favoris](docs/FAVORITES.md)
@@ -209,4 +211,5 @@ Les connecteurs NAS et monitoring sont eux aussi conçus en lecture seule depuis
 
 - Authentik/OIDC n'est pas encore branché à l'interface utilisateur.
 - Les opérations Docker restent volontairement en lecture seule.
-- La Phase 3F personnalise la position et la taille des widgets existants ; un catalogue utilisateur complet pour ajouter/supprimer librement des widgets pourra être traité dans une phase ultérieure.
+- Les extensions du catalogue de widgets sont en développement sur des PR successives ; leur déploiement sur le NAS n'est pas validé.
+- Les tests d'intégration réels sur Synology, le staging et la restauration contrôlée restent à effectuer avant de déclarer le projet prêt pour la production.

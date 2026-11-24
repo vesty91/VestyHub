@@ -50,6 +50,31 @@ Le montage `/var/run/docker.sock` reste sensible même en lecture seule. Toute p
 
 `SYNOLOGY_VERIFY_TLS=true` est le défaut obligatoire. Pour une PKI interne, monter une CA dédiée et utiliser `SYNOLOGY_CA_CERT_PATH`. Ne pas contourner une erreur de certificat en désactivant durablement la validation.
 
+## Contrôles de santé des favoris (anti-SSRF)
+
+Les requêtes `/api/favorites/health` sont authentifiées, limitées aux favoris
+de l'utilisateur connecté et à 96 cibles maximum avec six sondes parallèles.
+
+- Les URL doivent utiliser **HTTP(S)**, sans identifiants intégrés ni fragment.
+- Les destinations sont **refusées par défaut**, sauf hôtes publics configurés
+  exactement dans `HEALTHCHECK_ALLOWED_HOSTS`, ou adresses IPv4 appartenant aux
+  réseaux explicitement autorisés par `HEALTHCHECK_ALLOWED_CIDRS`.
+- Les adresses `127.0.0.0/8`, `0.0.0.0/8`, `169.254.0.0/16` (dont les
+  métadonnées cloud) et la multidiffusion sont toujours interdites, même si une
+  plage trop large est configurée.
+- Une résolution DNS est effectuée et l'IPv4 autorisée est **épinglée pour la
+  connexion**, afin d'éviter une deuxième résolution / attaque de type DNS rebinding.
+- Le contrôle utilise uniquement `HEAD`, ne suit **aucune redirection** et
+  vérifie les certificats HTTPS avec le nom d'origine. Temps de réponse borné.
+- Les adresses IPv6 sont volontairement non prises en charge par ce contrôle
+  tant qu'une validation de plages IPv6 équivalente n'est pas disponible.
+- Une cible interdite ou indisponible est affichée « Hors ligne », sans divulguer
+  d'adresse IP ou de détails de connexion dans la réponse API.
+
+Les réseaux autorisés représentent un **périmètre de confiance administrateur**.
+N'ajouter que les sous-réseaux strictement nécessaires : autoriser tout un LAN
+permet à un utilisateur habilité à créer des favoris d'en tester les hôtes.
+
 ## MCP
 
 - Aucun MCP ne reçoit le socket Docker du NAS.

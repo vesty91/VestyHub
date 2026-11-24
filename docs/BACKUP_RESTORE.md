@@ -4,6 +4,32 @@
 
 Une restauration PostgreSQL écrase ou remplace des données selon la procédure choisie. Tester le dump dans une base temporaire avant toute opération sur la production.
 
+## Exercice automatique en CI (sans données réelles)
+
+Le job GitHub Actions `PostgreSQL isolated backup/restore` utilise une base
+PostgreSQL 17 **jetable** (`vestyhub_backup_ci`) et exécute les migrations et
+le seed avec un compte de test fictif.
+
+Le script `scripts/ci-backup-restore-drill.sh` :
+
+1. Refuse de s'exécuter hors environnement Linux CI et hors des paramètres
+   de connexion de la base jetable attendue.
+2. Crée une sauvegarde logique PostgreSQL au format personnalisé
+   (`pg_dump -Fc`) avec le client PostgreSQL 17 correspondant au serveur.
+3. Vérifie que l'archive est non vide, calcule son **SHA-256** et fait contrôler
+   sa structure par `pg_restore --list`.
+4. Crée une seconde base de test distincte (`vestyhub_restore_ci`) et y
+   restaure l'archive **sans `--clean`, `dropdb` ni remplacement**.
+5. Compare la structure et les empreintes SHA-256 des enregistrements
+   `users`, `favorite_groups`, `favorites`, `dashboards` et
+   `dashboard_widgets`.
+
+L'archive est supprimée à la fin du job et **n'est pas publiée en artifact**.
+Ce test prouve la récupération des données de test dans le contexte CI ; il
+**ne valide pas** à lui seul les sauvegardes, les secrets chiffrés, les volumes
+ou la procédure de reprise du Synology. Ces tests restent à mener en staging
+isolé lorsque le NAS sera accessible.
+
 ## Sauvegarde PostgreSQL
 
 ```bash

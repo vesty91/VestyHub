@@ -33,7 +33,7 @@ export default defineConfig({
       AUTH_LOCAL_ENABLED: "true",
       AUTHENTIK_ENABLED: "false",
       DOCKER_CONTROL_ENABLED: "false",
-      DOCKER_LOGS_ENABLED: "true",
+      DOCKER_LOGS_ENABLED: process.env.DOCKER_LOGS_ENABLED ?? "false",
       SYNOLOGY_ENABLED: "false",
       SYNOLOGY_VERIFY_TLS: "true",
       DEMO_MODE: "false",

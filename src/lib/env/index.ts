@@ -88,29 +88,22 @@ const envSchema = z
     SEED_ADMIN_PASSWORD: z.string().optional().or(z.literal("")),
   })
   .superRefine((value, ctx) => {
-    if (!value.AUTH_LOCAL_ENABLED && !value.AUTHENTIK_ENABLED) {
+    // The OIDC callback/login routes have not been implemented. Allowing
+    // Authentik to replace local auth would lock all users out.
+    if (!value.AUTH_LOCAL_ENABLED) {
       ctx.addIssue({
         code: "custom",
-        message:
-          "At least one authentication method must be enabled: AUTH_LOCAL_ENABLED or AUTHENTIK_ENABLED.",
+        message: "AUTH_LOCAL_ENABLED must stay true until OIDC is implemented.",
         path: ["AUTH_LOCAL_ENABLED"],
       });
     }
 
     if (value.AUTHENTIK_ENABLED) {
-      for (const field of [
-        "AUTHENTIK_ISSUER",
-        "AUTHENTIK_CLIENT_ID",
-        "AUTHENTIK_CLIENT_SECRET",
-      ] as const) {
-        if (!value[field]) {
-          ctx.addIssue({
-            code: "custom",
-            message: `${field} is required when AUTHENTIK_ENABLED=true.`,
-            path: [field],
-          });
-        }
-      }
+      ctx.addIssue({
+        code: "custom",
+        message: "Authentik OIDC is not implemented; set AUTHENTIK_ENABLED=false.",
+        path: ["AUTHENTIK_ENABLED"],
+      });
     }
 
     if (value.DOCKER_CONTROL_ENABLED && !value.DOCKER_CONTROL_PROXY_URL) {
@@ -118,6 +111,13 @@ const envSchema = z
         code: "custom",
         message: "DOCKER_CONTROL_PROXY_URL is required when Docker control is enabled.",
         path: ["DOCKER_CONTROL_PROXY_URL"],
+      });
+    }
+    if (value.DOCKER_CONTROL_ENABLED && !value.DOCKER_EXPECTED_HOSTNAME) {
+      ctx.addIssue({
+        code: "custom",
+        message: "DOCKER_EXPECTED_HOSTNAME is required when Docker control is enabled.",
+        path: ["DOCKER_EXPECTED_HOSTNAME"],
       });
     }
 

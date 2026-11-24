@@ -59,6 +59,8 @@ export interface DockerEngineSummary {
 }
 
 export interface DockerOverview {
+  /** False means intentionally absent from the environment, not an outage. */
+  configured?: boolean;
   available: boolean;
   partial: boolean;
   fetchedAt: string;

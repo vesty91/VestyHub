@@ -1,6 +1,7 @@
 import { Activity, BellRing, ChartNoAxesCombined } from "lucide-react";
 
 import { Panel, PanelHeader, StatusDot } from "@/components/vestyhub/primitives";
+import { monitoringAvailability } from "@/connectors/monitoring/availability";
 import { publicMonitoringErrorMessage } from "@/connectors/monitoring/errors";
 import type { MonitoringSourceStatus } from "@/connectors/monitoring/types";
 
@@ -13,11 +14,13 @@ const sourceMeta = {
 export function SourceStatus({ status }: { status: MonitoringSourceStatus }) {
   const meta = sourceMeta[status.source];
   const Icon = meta.icon;
-  const label = status.available
-    ? "Disponible"
-    : status.configured
-      ? "Indisponible"
-      : "Non configuré";
+  const availability = monitoringAvailability(status);
+  const label =
+    availability === "available"
+      ? "Disponible"
+      : availability === "unreachable"
+        ? "Indisponible"
+        : "Non configuré";
 
   return (
     <Panel>
@@ -28,7 +31,13 @@ export function SourceStatus({ status }: { status: MonitoringSourceStatus }) {
         action={
           <StatusDot
             label={label}
-            tone={status.available ? "success" : status.configured ? "danger" : "warning"}
+            tone={
+              availability === "available"
+                ? "success"
+                : availability === "unreachable"
+                  ? "danger"
+                  : "neutral"
+            }
             pulse={status.available}
           />
         }

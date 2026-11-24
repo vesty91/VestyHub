@@ -33,6 +33,22 @@ docker compose run --rm migrate
 docker compose --profile seed run --rm seed
 ```
 
+## État du connecteur Docker NAS
+
+La source Docker du NAS est **optionnelle** :
+
+- Si `DOCKER_PROXY_URL` n’est pas renseigné, le tableau de bord indique
+  **« Non configuré »** (état neutre) et n’effectue aucune requête Docker.
+  La page Docker n’actualise pas automatiquement cette source désactivée.
+- Si un proxy est configuré mais inaccessible, l’état est **« Indisponible »**
+  avec un bouton de réessai. Ce cas reste une anomalie à diagnostiquer.
+- Si le proxy répond et que l’identité de l’hôte correspond aux attentes,
+  les métriques réelles sont affichées.
+
+Cette distinction n’active aucun contrôle Docker et n’ajoute aucun accès réseau.
+Une modification de variables d’environnement nécessite de redémarrer
+l’application pour recharger la configuration du serveur.
+
 ## Proxy Docker
 
 Le service autorise uniquement les sections de lecture utiles, avec `POST=0`. Les opérations `exec`, build, secrets, swarm, services et plugins restent bloquées.

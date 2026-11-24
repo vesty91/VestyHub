@@ -152,6 +152,28 @@ export function DashboardWidgetSettingsEditor({
         </div>
       ) : null}
 
+      {type === "local-health" ? (
+        <label className="text-muted-foreground flex items-center justify-between gap-3 text-xs">
+          <span>Actualisation (secondes)</span>
+          <select
+            value={Number(draft.refreshSeconds ?? 15)}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                refreshSeconds: Number(event.target.value),
+              }))
+            }
+            className="border-border bg-background text-foreground h-8 rounded-md border px-2 text-xs"
+          >
+            {[5, 10, 15, 30, 60].map((seconds) => (
+              <option key={seconds} value={seconds}>
+                {seconds}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       {type === "monitoring" ? (
         <div className="space-y-3">
           <label className="text-muted-foreground flex items-center justify-between gap-3 text-xs">

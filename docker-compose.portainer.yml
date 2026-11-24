@@ -68,7 +68,7 @@ services:
       - no-new-privileges:true
 
   migrate:
-    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     command: ["./node_modules/.bin/tsx", "src/db/migrate.ts"]
     restart: "no"
     environment: *app-environment
@@ -81,7 +81,7 @@ services:
       - no-new-privileges:true
 
   app:
-    image: vestyhub:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    image: vestyhub:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     restart: unless-stopped
     environment: *app-environment
     depends_on:
@@ -118,7 +118,7 @@ services:
       vestyhub.enable: "false"
 
   seed:
-    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.3.0}
+    image: vestyhub-tools:${VESTYHUB_IMAGE_TAG:-v0.4.0}
     command: ["./node_modules/.bin/tsx", "src/db/seed.ts"]
     profiles: ["seed"]
     restart: "no"

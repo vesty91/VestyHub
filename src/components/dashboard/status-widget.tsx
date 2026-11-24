@@ -24,8 +24,13 @@ export function StatusWidget({
     configuration.showDocker
       ? {
           label: "Docker proxy",
-          detail: docker.available ? "Lecture seule" : "Non joignable",
+          detail: docker.available
+            ? "Lecture seule"
+            : docker.configured === false
+              ? "Non configuré"
+              : "Non joignable",
           healthy: docker.available,
+          disabled: docker.configured === false,
           icon: Container,
         }
       : null,
@@ -65,7 +70,9 @@ export function StatusWidget({
               className={`size-2 rounded-full ${
                 check.healthy
                   ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]"
-                  : "bg-red-400"
+                  : "disabled" in check && check.disabled
+                    ? "bg-zinc-500"
+                    : "bg-red-400"
               }`}
             />
           </div>

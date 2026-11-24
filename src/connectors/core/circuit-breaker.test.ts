@@ -37,6 +37,35 @@ describe("CircuitBreaker", () => {
     expect(breaker.getState()).toBe("closed");
   });
 
+  it("does not trip on permanent errors and still reports them", async () => {
+    const breaker = new CircuitBreaker("DSM", {
+      failureThreshold: 2,
+      cooldownMs: 100,
+      shouldTrip: (error) => error instanceof TypeError,
+    });
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await expect(
+        breaker.execute(async () => {
+          throw new Error("HTTP 401 Unauthorized");
+        }),
+      ).rejects.toThrow("HTTP 401 Unauthorized");
+      expect(breaker.getState()).toBe("closed");
+    }
+
+    await expect(
+      breaker.execute(async () => {
+        throw new TypeError("connection refused");
+      }),
+    ).rejects.toThrow("connection refused");
+    await expect(
+      breaker.execute(async () => {
+        throw new TypeError("connection refused");
+      }),
+    ).rejects.toThrow("connection refused");
+    expect(breaker.getState()).toBe("open");
+  });
+
   it("validates its limits", () => {
     expect(() => new CircuitBreaker("x", { failureThreshold: 0 })).toThrow(RangeError);
     expect(() => new CircuitBreaker("x", { cooldownMs: 0 })).toThrow(RangeError);

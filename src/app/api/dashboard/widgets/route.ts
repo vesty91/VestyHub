@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/db";
 import { dashboardWidgets, dashboards } from "@/db/schema";
+import { canMutateDashboard } from "@/lib/auth/roles";
 import { getCurrentSession } from "@/lib/auth/session";
 import { findDashboardWidgetPlacement } from "@/lib/dashboard/layout";
 import {
@@ -21,6 +22,12 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Authentification requise." },
       { status: 401, headers: NO_STORE_HEADERS },
+    );
+  }
+  if (!canMutateDashboard(session.user.role)) {
+    return NextResponse.json(
+      { error: "Droits d’édition requis." },
+      { status: 403, headers: NO_STORE_HEADERS },
     );
   }
 
@@ -181,6 +188,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json(
       { error: "Authentification requise." },
       { status: 401, headers: NO_STORE_HEADERS },
+    );
+  }
+  if (!canMutateDashboard(session.user.role)) {
+    return NextResponse.json(
+      { error: "Droits d’édition requis." },
+      { status: 403, headers: NO_STORE_HEADERS },
     );
   }
 

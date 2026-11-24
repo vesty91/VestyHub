@@ -6,6 +6,9 @@ import { ClockWidget } from "@/components/dashboard/clock-widget";
 import { DashboardApplications } from "@/components/dashboard/dashboard-applications";
 import { FavoritesWidget } from "@/components/dashboard/favorites-widget";
 import { GridStackDashboard } from "@/components/dashboard/gridstack-dashboard";
+import { LocalHealthWidget } from "@/components/dashboard/local-health-widget";
+import { LocalResourcesPanel } from "@/components/dashboard/local-resources-panel";
+import { LocalTopProcesses } from "@/components/dashboard/local-top-processes";
 import { MonitoringWidget } from "@/components/dashboard/monitoring-widget";
 import { StatusWidget } from "@/components/dashboard/status-widget";
 import { Badge } from "@/components/ui/badge";
@@ -26,79 +29,95 @@ import {
   favorites,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
-import { resolveDashboardWidgetConfiguration } from "@/lib/dashboard/widget-catalog";
+import { withDatabaseReadDeadline } from "@/lib/database-read-deadline";
+import { getEnv } from "@/lib/env";
+import {
+  isDashboardWidgetType,
+  resolveDashboardWidgetConfiguration,
+} from "@/lib/dashboard/widget-catalog";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await requireUser();
+  const env = getEnv();
+  const isLocalDevelopment = env.NODE_ENV === "development" && !env.SYNOLOGY_ENABLED;
+  const isLocalWindows = isLocalDevelopment && process.platform === "win32";
 
-  const [dashboard] = await db
-    .select()
-    .from(dashboards)
-    .where(eq(dashboards.userId, user.id))
-    .orderBy(desc(dashboards.isDefault), dashboards.createdAt)
-    .limit(1);
+  const [dashboard] = await withDatabaseReadDeadline(
+    db
+      .select()
+      .from(dashboards)
+      .where(eq(dashboards.userId, user.id))
+      .orderBy(desc(dashboards.isDefault), dashboards.createdAt)
+      .limit(1),
+  );
 
   const [widgets, pinnedFavorites, favoriteStats, groupStats, recentEvents, docker] =
-    await Promise.all([
-      dashboard
-        ? db
-            .select()
-            .from(dashboardWidgets)
-            .where(eq(dashboardWidgets.dashboardId, dashboard.id))
-            .orderBy(dashboardWidgets.positionY, dashboardWidgets.positionX)
-        : Promise.resolve([]),
-      db
-        .select({
-          id: favorites.id,
-          userId: favorites.userId,
-          groupId: favorites.groupId,
-          name: favorites.name,
-          description: favorites.description,
-          internalUrl: favorites.internalUrl,
-          externalUrl: favorites.externalUrl,
-          iconType: favorites.iconType,
-          iconValue: favorites.iconValue,
-          tags: favorites.tags,
-          openMode: favorites.openMode,
-          healthCheckEnabled: favorites.healthCheckEnabled,
-          healthCheckUrl: favorites.healthCheckUrl,
-          dockerContainerId: favorites.dockerContainerId,
-          connectorId: favorites.connectorId,
-          sortOrder: favorites.sortOrder,
-          isFavorite: favorites.isFavorite,
-          positionX: favorites.positionX,
-          positionY: favorites.positionY,
-          width: favorites.width,
-          height: favorites.height,
-          createdAt: favorites.createdAt,
-          updatedAt: favorites.updatedAt,
-          groupName: favoriteGroups.name,
-        })
-        .from(favorites)
-        .leftJoin(favoriteGroups, eq(favorites.groupId, favoriteGroups.id))
-        .where(and(eq(favorites.userId, user.id), eq(favorites.isFavorite, true)))
-        .orderBy(favorites.sortOrder)
-        .limit(8),
-      db.select({ value: count() }).from(favorites).where(eq(favorites.userId, user.id)),
-      db
-        .select({ value: count() })
-        .from(favoriteGroups)
-        .where(eq(favoriteGroups.userId, user.id)),
-      db
-        .select({
-          id: auditLogs.id,
-          action: auditLogs.action,
-          resourceType: auditLogs.resourceType,
-          createdAt: auditLogs.createdAt,
-        })
-        .from(auditLogs)
-        .where(eq(auditLogs.userId, user.id))
-        .orderBy(desc(auditLogs.createdAt))
-        .limit(5),
-      getDockerOverview(),
-    ]);
+    await withDatabaseReadDeadline(
+      Promise.all([
+        dashboard
+          ? db
+              .select()
+              .from(dashboardWidgets)
+              .where(eq(dashboardWidgets.dashboardId, dashboard.id))
+              .orderBy(dashboardWidgets.positionY, dashboardWidgets.positionX)
+          : Promise.resolve([]),
+        db
+          .select({
+            id: favorites.id,
+            userId: favorites.userId,
+            groupId: favorites.groupId,
+            name: favorites.name,
+            description: favorites.description,
+            internalUrl: favorites.internalUrl,
+            externalUrl: favorites.externalUrl,
+            iconType: favorites.iconType,
+            iconValue: favorites.iconValue,
+            tags: favorites.tags,
+            openMode: favorites.openMode,
+            healthCheckEnabled: favorites.healthCheckEnabled,
+            healthCheckUrl: favorites.healthCheckUrl,
+            dockerContainerId: favorites.dockerContainerId,
+            connectorId: favorites.connectorId,
+            sortOrder: favorites.sortOrder,
+            isFavorite: favorites.isFavorite,
+            positionX: favorites.positionX,
+            positionY: favorites.positionY,
+            width: favorites.width,
+            height: favorites.height,
+            createdAt: favorites.createdAt,
+            updatedAt: favorites.updatedAt,
+            groupName: favoriteGroups.name,
+          })
+          .from(favorites)
+          .leftJoin(favoriteGroups, eq(favorites.groupId, favoriteGroups.id))
+          .where(and(eq(favorites.userId, user.id), eq(favorites.isFavorite, true)))
+          .orderBy(favorites.sortOrder)
+          .limit(8),
+        db
+          .select({ value: count() })
+          .from(favorites)
+          .where(eq(favorites.userId, user.id)),
+        db
+          .select({ value: count() })
+          .from(favoriteGroups)
+          .where(eq(favoriteGroups.userId, user.id)),
+        db
+          .select({
+            id: auditLogs.id,
+            action: auditLogs.action,
+            resourceType: auditLogs.resourceType,
+            createdAt: auditLogs.createdAt,
+          })
+          .from(auditLogs)
+          .where(eq(auditLogs.userId, user.id))
+          .orderBy(desc(auditLogs.createdAt))
+          .limit(5),
+        isLocalDevelopment ? Promise.resolve(null) : getDockerOverview(),
+      ]),
+      12_000,
+    );
 
   const favoriteCount = Number(favoriteStats[0]?.value ?? 0);
   const groupCount = Number(groupStats[0]?.value ?? 0);
@@ -114,12 +133,18 @@ export default async function DashboardPage() {
     },
     {
       label: "Conteneurs Docker",
-      value: docker.available ? docker.counters.total : "—",
-      detail: docker.available
+      value: docker?.available ? docker.counters.total : "—",
+      detail: docker?.available
         ? `${docker.counters.running} en cours`
-        : "Proxy indisponible",
+        : docker?.configured === false
+          ? "Source non configurée"
+          : "Proxy indisponible",
       icon: <Container className="size-4" />,
-      tone: docker.available ? ("success" as const) : ("warning" as const),
+      tone: docker?.available
+        ? ("success" as const)
+        : docker?.configured === false
+          ? ("neutral" as const)
+          : ("warning" as const),
     },
     {
       label: "Widgets",
@@ -141,12 +166,16 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-[1600px] space-y-7">
       <PageHeader
         title={`Bonjour, ${user.name.split(" ")[0]}`}
-        description="Voici l’état actuel de ton environnement homelab, alimenté par PostgreSQL et les connecteurs réels du NAS."
+        description={
+          isLocalDevelopment
+            ? "Ton centre de contrôle en développement local, sans dépendance au Synology."
+            : "Voici l’état actuel de ton environnement homelab, alimenté par PostgreSQL et les connecteurs réels du NAS."
+        }
         eyebrow={
           <>
             <Badge className="border-primary/20 bg-primary/10 text-primary">
               <span className="bg-success size-1.5 rounded-full" />
-              Phase 3K · v0.3.0
+              {isLocalWindows ? "Dashboard local V2" : "VestyHub · v0.4.0"}
             </Badge>
             <span className="text-muted-foreground text-xs">
               Dashboard personnalisable
@@ -164,11 +193,34 @@ export default async function DashboardPage() {
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </section>
+      {isLocalDevelopment ? (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] p-4 text-sm"
+          role="status"
+        >
+          <Activity className="mt-0.5 size-4 shrink-0 text-cyan-300" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-cyan-200">Mode local actif</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              VestyHub surveille les ressources Windows et ses services locaux, sans
+              connexion au Synology.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {isLocalWindows ? (
+        <div className="space-y-3">
+          <LocalResourcesPanel />
+          <LocalTopProcesses />
+        </div>
+      ) : (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Résumé">
+          {stats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))}
+        </section>
+      )}
 
       <section className="space-y-3" aria-labelledby="applications-title">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -213,6 +265,7 @@ export default async function DashboardPage() {
               const contentMinHeight = [
                 "favorites",
                 "system-status",
+                "local-health",
                 "monitoring",
               ].includes(widget.widgetType)
                 ? 2
@@ -253,10 +306,34 @@ export default async function DashboardPage() {
                 ) : null}
                 {widget.widgetType === "system-status" ? (
                   <StatusWidget
-                    docker={docker}
+                    docker={
+                      docker ?? {
+                        available: false,
+                        partial: false,
+                        fetchedAt: new Date().toISOString(),
+                        counters: {
+                          total: 0,
+                          running: 0,
+                          paused: 0,
+                          stopped: 0,
+                          unhealthy: 0,
+                        },
+                        containers: [],
+                        warnings: [],
+                        error: "Mode local : proxy NAS non configuré",
+                      }
+                    }
                     databaseReady
                     configuration={resolveDashboardWidgetConfiguration(
                       "system-status",
+                      widget.configuration,
+                    )}
+                  />
+                ) : null}
+                {widget.widgetType === "local-health" ? (
+                  <LocalHealthWidget
+                    configuration={resolveDashboardWidgetConfiguration(
+                      "local-health",
                       widget.configuration,
                     )}
                   />
@@ -269,9 +346,7 @@ export default async function DashboardPage() {
                     )}
                   />
                 ) : null}
-                {!["clock", "favorites", "system-status", "monitoring"].includes(
-                  widget.widgetType,
-                ) ? (
+                {!isDashboardWidgetType(widget.widgetType) ? (
                   <Panel className="h-full">
                     <p className="text-sm font-medium">{widget.title}</p>
                     <p className="text-muted-foreground mt-2 text-xs">
@@ -285,49 +360,65 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-        <Panel>
-          <PanelHeader
-            title="Docker"
-            subtitle="Synthèse du moteur NAS en lecture seule"
-            icon={<Container className="size-4" />}
-            action={
-              <Link href="/docker" className="text-primary hover:text-primary/80 text-xs">
-                Voir les détails
-              </Link>
-            }
-          />
+      <section
+        className={
+          isLocalDevelopment ? "grid gap-4" : "grid gap-4 xl:grid-cols-[1.5fr_1fr]"
+        }
+      >
+        {!isLocalDevelopment && docker ? (
+          <Panel>
+            <PanelHeader
+              title="Docker"
+              subtitle="Synthèse du moteur NAS en lecture seule"
+              icon={<Container className="size-4" />}
+              action={
+                <Link
+                  href="/docker"
+                  className="text-primary hover:text-primary/80 text-xs"
+                >
+                  Voir les détails
+                </Link>
+              }
+            />
 
-          {docker.available && docker.engine ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="bg-surface-elevated/65 rounded-xl p-4">
+            {docker.available && docker.engine ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="bg-surface-elevated/65 rounded-xl p-4">
+                  <StatusDot
+                    tone="success"
+                    label="Actifs"
+                    pulse={docker.counters.running > 0}
+                  />
+                  <p className="text-success mt-3 text-2xl font-semibold">
+                    {docker.counters.running}
+                  </p>
+                </div>
+                <div className="bg-surface-elevated/65 rounded-xl p-4">
+                  <StatusDot tone="neutral" label="Arrêtés" />
+                  <p className="mt-3 text-2xl font-semibold">{docker.counters.stopped}</p>
+                </div>
+                <div className="bg-surface-elevated/65 rounded-xl p-4">
+                  <StatusDot tone="info" label="Images" />
+                  <p className="text-info mt-3 text-2xl font-semibold">
+                    {docker.engine.images}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="border-warning/20 bg-warning/[0.06] rounded-xl border p-4">
                 <StatusDot
-                  tone="success"
-                  label="Actifs"
-                  pulse={docker.counters.running > 0}
+                  tone={docker.configured === false ? "neutral" : "warning"}
+                  label={
+                    docker.configured === false
+                      ? "Docker non configuré"
+                      : "Docker indisponible"
+                  }
                 />
-                <p className="text-success mt-3 text-2xl font-semibold">
-                  {docker.counters.running}
-                </p>
+                <p className="text-muted-foreground mt-2 text-sm">{docker.error}</p>
               </div>
-              <div className="bg-surface-elevated/65 rounded-xl p-4">
-                <StatusDot tone="neutral" label="Arrêtés" />
-                <p className="mt-3 text-2xl font-semibold">{docker.counters.stopped}</p>
-              </div>
-              <div className="bg-surface-elevated/65 rounded-xl p-4">
-                <StatusDot tone="info" label="Images" />
-                <p className="text-info mt-3 text-2xl font-semibold">
-                  {docker.engine.images}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="border-warning/20 bg-warning/[0.06] rounded-xl border p-4">
-              <StatusDot tone="warning" label="Docker indisponible" />
-              <p className="text-muted-foreground mt-2 text-sm">{docker.error}</p>
-            </div>
-          )}
-        </Panel>
+            )}
+          </Panel>
+        ) : null}
 
         <Panel>
           <PanelHeader

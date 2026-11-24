@@ -9,11 +9,14 @@ export type DockerContainerAction = z.infer<typeof dockerContainerActionSchema>[
 
 export function isProtectedVestyHubContainer(
   labels: Record<string, string> | null | undefined,
+  names: readonly string[] = [],
 ): boolean {
-  if (labels?.["com.docker.compose.project"] !== "vestyhub") return false;
-  return ["app", "postgres", "docker-socket-proxy", "docker-control-proxy"].includes(
-    labels["com.docker.compose.service"] ?? "",
-  );
+  // Protect every VestyHub Compose project, not only a short list of services.
+  const project = labels?.["com.docker.compose.project"] ?? "";
+  if (/^vestyhub(?:[-_][a-z0-9_-]+)?$/i.test(project)) return true;
+  if (labels?.["vestyhub.protected"] === "true") return true;
+  // Fail closed for manually named control-plane containers without labels.
+  return names.some((name) => /^\/?vestyhub(?:$|[-_])/i.test(name));
 }
 
 export function dockerActionPath(

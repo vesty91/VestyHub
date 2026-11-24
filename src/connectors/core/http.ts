@@ -12,10 +12,16 @@ function validateTimeout(timeoutMs: number): void {
   }
 }
 
-export async function fetchWithTimeout(
+/**
+ * A single deadline for both HTTP headers and the entire response body.
+ * The provided reader must consume the body before it resolves; otherwise
+ * only the headers are protected. The timer is always cleaned up.
+ */
+export async function fetchWithTimeoutResult<T>(
   input: string | URL,
   { timeoutMs, connectorName, signal, ...init }: FetchWithTimeoutOptions,
-): Promise<Response> {
+  read: (response: Response) => Promise<T> | T,
+): Promise<T> {
   validateTimeout(timeoutMs);
 
   if (signal?.aborted) {
@@ -33,7 +39,8 @@ export async function fetchWithTimeout(
   signal?.addEventListener("abort", onExternalAbort, { once: true });
 
   try {
-    return await fetch(input, { ...init, signal: controller.signal });
+    const response = await fetch(input, { ...init, signal: controller.signal });
+    return await read(response);
   } catch (error) {
     if (timedOut) {
       throw new ConnectorTimeoutError(connectorName, timeoutMs);
@@ -46,4 +53,16 @@ export async function fetchWithTimeout(
     clearTimeout(timeout);
     signal?.removeEventListener("abort", onExternalAbort);
   }
+}
+
+/**
+ * Header-only compatibility API: intended for requests where callers do not
+ * consume a response body (e.g. Docker POST actions).
+ * Use fetchWithTimeoutResult for JSON/text to cover slow or stalled bodies.
+ */
+export async function fetchWithTimeout(
+  input: string | URL,
+  options: FetchWithTimeoutOptions,
+): Promise<Response> {
+  return fetchWithTimeoutResult(input, options, (response) => response);
 }
