@@ -1,0 +1,73 @@
+name: Container image qualification
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build application and migration images
+        run: |
+          docker build --target runner -t vestyhub:ci .
+          docker build --target tools -t vestyhub-tools:ci .
+      - name: Qualify images against disposable PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create vestyhub-image-ci
+          docker run -d --name vestyhub-image-db --network vestyhub-image-ci \
+            -e POSTGRES_USER=vestyhub -e POSTGRES_PASSWORD=ci-only-dummy-password \
+            -e POSTGRES_DB=vestyhub postgres:17-alpine
+          for i in {1..60}; do
+            if docker exec vestyhub-image-db pg_isready -U vestyhub -d vestyhub; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec vestyhub-image-db pg_isready -U vestyhub -d vestyhub
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          cat > "$env_file" <<'ENV'
+          NODE_ENV=production
+          APP_URL=http://127.0.0.1:3000
+          APP_PORT=3000
+          APP_ENCRYPTION_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          AUTH_SECRET=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          DATABASE_URL=postgresql://vestyhub:ci-only-dummy-password@vestyhub-image-db:5432/vestyhub
+          AUTH_LOCAL_ENABLED=true
+          AUTHENTIK_ENABLED=false
+          DOCKER_CONTROL_ENABLED=false
+          DOCKER_LOGS_ENABLED=false
+          SYNOLOGY_ENABLED=false
+          SYNOLOGY_VERIFY_TLS=true
+          DEMO_MODE=false
+          ENV
+          docker run --rm --network vestyhub-image-ci --env-file "$env_file" vestyhub-tools:ci
+          docker run -d --name vestyhub-image-app --network vestyhub-image-ci \
+            --env-file "$env_file" --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:size=64m,mode=1777 \
+            --tmpfs /app/.next/cache:size=128m,uid=1001,gid=1001,mode=0750 \
+            -p 127.0.0.1:3000:3000 vestyhub:ci
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/api/health/ready >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/api/health/live
+          curl -fsS http://127.0.0.1:3000/api/health/ready
+          test "$(docker exec vestyhub-image-app id -u)" = 1001
+      - name: Report image metadata
+        if: always()
+        run: docker image ls --filter reference=vestyhub:ci --filter reference=vestyhub-tools:ci
+      - name: Report disposable container status
+        if: always()
+        run: docker ps -a --filter name=vestyhub-image-
