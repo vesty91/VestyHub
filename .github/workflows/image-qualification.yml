@@ -65,6 +65,36 @@ jobs:
           curl -fsS http://127.0.0.1:3000/api/health/live
           curl -fsS http://127.0.0.1:3000/api/health/ready
           test "$(docker exec vestyhub-image-app id -u)" = 1001
+      - name: Verify runtime hardening and database recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' vestyhub-image-app)" = true
+          app_id="$(docker inspect --format '{{.Id}}' vestyhub-image-app)"
+          started_at="$(docker inspect --format '{{.State.StartedAt}}' vestyhub-image-app)"
+          wait_status() {
+            local endpoint="$1" expected="$2" actual
+            for i in {1..60}; do
+              actual="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000/api/health/$endpoint" || true)"
+              if [ "$actual" = "$expected" ]; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "Expected $endpoint HTTP $expected, last status: $actual" >&2
+            return 1
+          }
+          # Only the disposable database on this GitHub-hosted runner.
+          trap 'docker start vestyhub-image-db >/dev/null' EXIT
+          docker stop vestyhub-image-db
+          wait_status ready 503
+          wait_status live 200
+          docker start vestyhub-image-db
+          wait_status ready 200
+          wait_status live 200
+          test "$(docker inspect --format '{{.Id}}' vestyhub-image-app)" = "$app_id"
+          test "$(docker inspect --format '{{.State.StartedAt}}' vestyhub-image-app)" = "$started_at"
+          trap - EXIT
       - name: Report image metadata
         if: always()
         run: docker image ls --filter reference=vestyhub:ci --filter reference=vestyhub-tools:ci
