@@ -1,0 +1,145 @@
+name: Container image qualification
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build application and migration images
+        run: |
+          docker build --target runner -t vestyhub:ci .
+          docker build --target tools -t vestyhub-tools:ci .
+      - name: Qualify images against disposable PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create vestyhub-image-ci
+          docker run -d --name vestyhub-image-db --network vestyhub-image-ci \
+            -e POSTGRES_USER=vestyhub -e POSTGRES_PASSWORD=ci-only-dummy-password \
+            -e POSTGRES_DB=vestyhub postgres:17-alpine
+          for i in {1..60}; do
+            if docker exec vestyhub-image-db pg_isready -U vestyhub -d vestyhub; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec vestyhub-image-db pg_isready -U vestyhub -d vestyhub
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          cat > "$env_file" <<'ENV'
+          NODE_ENV=production
+          APP_URL=http://127.0.0.1:3000
+          APP_PORT=3000
+          APP_ENCRYPTION_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          AUTH_SECRET=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          DATABASE_URL=postgresql://vestyhub:ci-only-dummy-password@vestyhub-image-db:5432/vestyhub
+          AUTH_LOCAL_ENABLED=true
+          AUTHENTIK_ENABLED=false
+          DOCKER_CONTROL_ENABLED=false
+          DOCKER_LOGS_ENABLED=false
+          SYNOLOGY_ENABLED=false
+          SYNOLOGY_VERIFY_TLS=true
+          DEMO_MODE=false
+          ENV
+          docker run --rm --network vestyhub-image-ci --env-file "$env_file" vestyhub-tools:ci
+          docker run -d --name vestyhub-image-app --network vestyhub-image-ci \
+            --env-file "$env_file" --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:size=64m,mode=1777 \
+            --tmpfs /app/.next/cache:size=128m,uid=1001,gid=1001,mode=0750 \
+            -p 127.0.0.1:3000:3000 vestyhub:ci
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/api/health/ready >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/api/health/live
+          curl -fsS http://127.0.0.1:3000/api/health/ready
+          test "$(docker exec vestyhub-image-app id -u)" = 1001
+      - name: Verify runtime hardening and database recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' vestyhub-image-app)" = true
+          app_id="$(docker inspect --format '{{.Id}}' vestyhub-image-app)"
+          started_at="$(docker inspect --format '{{.State.StartedAt}}' vestyhub-image-app)"
+          wait_status() {
+            local endpoint="$1" expected="$2" actual
+            for i in {1..60}; do
+              actual="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000/api/health/$endpoint" || true)"
+              if [ "$actual" = "$expected" ]; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "Expected $endpoint HTTP $expected, last status: $actual" >&2
+            return 1
+          }
+          # Only the disposable database on this GitHub-hosted runner.
+          trap 'docker start vestyhub-image-db >/dev/null' EXIT
+          docker stop vestyhub-image-db
+          wait_status ready 503
+          wait_status live 200
+          docker start vestyhub-image-db
+          wait_status ready 200
+          wait_status live 200
+          test "$(docker inspect --format '{{.Id}}' vestyhub-image-app)" = "$app_id"
+          test "$(docker inspect --format '{{.State.StartedAt}}' vestyhub-image-app)" = "$started_at"
+          trap - EXIT
+      - name: Inventory minimatch in final images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p image-inventory
+          for image in vestyhub vestyhub-tools; do
+            docker run --rm -i --network none --read-only --cap-drop ALL \
+              --security-opt no-new-privileges:true --entrypoint node "$image:ci" - \
+              > "image-inventory/$image.json" <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = '/app';
+          const matches = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const file = path.join(dir, entry.name);
+              // pnpm stores physical packages under .pnpm; do not follow links.
+              if (entry.isDirectory()) {
+                walk(file);
+              } else if (entry.isFile() && entry.name === 'package.json' &&
+                         path.basename(dir) === 'minimatch') {
+                const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+                if (pkg.name === 'minimatch') {
+                  if (typeof pkg.version !== 'string') throw new Error('Missing version');
+                  matches.push({ version: pkg.version, path: path.relative(root, dir) });
+                }
+              }
+            }
+          }
+          walk(root);
+          matches.sort((a, b) => a.path.localeCompare(b.path));
+          console.log(JSON.stringify({ scope: root, matches }, null, 2));
+          NODE
+            cat "image-inventory/$image.json"
+          done
+      - name: Upload final image dependency inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-image-minimatch-inventory
+          path: image-inventory/*.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Report image metadata
+        if: always()
+        run: docker image ls --filter reference=vestyhub:ci --filter reference=vestyhub-tools:ci
+      - name: Report disposable container status
+        if: always()
+        run: docker ps -a --filter name=vestyhub-image-
