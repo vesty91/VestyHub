@@ -95,6 +95,48 @@ jobs:
           test "$(docker inspect --format '{{.Id}}' vestyhub-image-app)" = "$app_id"
           test "$(docker inspect --format '{{.State.StartedAt}}' vestyhub-image-app)" = "$started_at"
           trap - EXIT
+      - name: Inventory minimatch in final images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p image-inventory
+          for image in vestyhub vestyhub-tools; do
+            docker run --rm -i --network none --read-only --cap-drop ALL \
+              --security-opt no-new-privileges:true --entrypoint node "$image:ci" - \
+              > "image-inventory/$image.json" <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = '/app';
+          const matches = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const file = path.join(dir, entry.name);
+              // pnpm stores physical packages under .pnpm; do not follow links.
+              if (entry.isDirectory()) {
+                walk(file);
+              } else if (entry.isFile() && entry.name === 'package.json' &&
+                         path.basename(dir) === 'minimatch') {
+                const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+                if (pkg.name === 'minimatch') {
+                  if (typeof pkg.version !== 'string') throw new Error('Missing version');
+                  matches.push({ version: pkg.version, path: path.relative(root, dir) });
+                }
+              }
+            }
+          }
+          walk(root);
+          matches.sort((a, b) => a.path.localeCompare(b.path));
+          console.log(JSON.stringify({ scope: root, matches }, null, 2));
+          NODE
+            cat "image-inventory/$image.json"
+          done
+      - name: Upload final image dependency inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-image-minimatch-inventory
+          path: image-inventory/*.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Report image metadata
         if: always()
         run: docker image ls --filter reference=vestyhub:ci --filter reference=vestyhub-tools:ci
